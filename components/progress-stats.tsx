@@ -13,11 +13,12 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
     profile.totalQuestionsAttempted > 0 ? (profile.correctAnswers / profile.totalQuestionsAttempted) * 100 : 0
 
   const avgMinutes = Math.round(profile.averageTimePerQuestion / 60)
+  const totalHours = Math.round(profile.totalTimeSpent / 3600)
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <Card className="p-4">
-        <p className="text-sm text-muted-foreground mb-2">Current Difficulty</p>
+        <p className="text-sm text-muted-foreground mb-2">Current Level</p>
         <p className="text-2xl font-bold text-foreground capitalize">{profile.currentDifficulty}</p>
       </Card>
 
@@ -33,8 +34,13 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
       </Card>
 
       <Card className="p-4">
-        <p className="text-sm text-muted-foreground mb-2">Avg Time per Question</p>
+        <p className="text-sm text-muted-foreground mb-2">Avg Time</p>
         <p className="text-2xl font-bold text-foreground">{avgMinutes}m</p>
+      </Card>
+
+      <Card className="p-4">
+        <p className="text-sm text-muted-foreground mb-2">Total Time</p>
+        <p className="text-2xl font-bold text-foreground">{totalHours}h</p>
       </Card>
     </div>
   )

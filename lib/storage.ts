@@ -1,6 +1,4 @@
-// LocalStorage management for user data
-
-import type { UserProfile, LearningPath } from "./types"
+import type { UserProfile, LearningPath, TopicStats } from "./types"
 import { predefinedLearningPaths } from "./question-templates"
 
 const USER_PROFILE_KEY = "neuro_user_profile"
@@ -15,6 +13,10 @@ export function initializeUserProfile(): UserProfile {
     progressHistory: [],
     currentLearningPath: "path-beginner",
     topicsCompleted: [],
+    topicStats: new Map<string, TopicStats>(),
+    streakCount: 0,
+    lastActivityDate: Date.now(),
+    totalTimeSpent: 0,
   }
 }
 
@@ -22,12 +24,26 @@ export function getUserProfile(): UserProfile {
   if (typeof window === "undefined") return initializeUserProfile()
 
   const stored = localStorage.getItem(USER_PROFILE_KEY)
-  return stored ? JSON.parse(stored) : initializeUserProfile()
+  if (!stored) return initializeUserProfile()
+
+  const parsed = JSON.parse(stored)
+  if (parsed.topicStats && typeof parsed.topicStats === "object" && !(parsed.topicStats instanceof Map)) {
+    const topicStatsMap = new Map<string, TopicStats>()
+    Object.entries(parsed.topicStats).forEach(([key, value]) => {
+      topicStatsMap.set(key, value as TopicStats)
+    })
+    parsed.topicStats = topicStatsMap
+  }
+  return parsed
 }
 
 export function saveUserProfile(profile: UserProfile): void {
   if (typeof window === "undefined") return
-  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile))
+  const serializable = {
+    ...profile,
+    topicStats: Object.fromEntries(profile.topicStats),
+  }
+  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(serializable))
 }
 
 export function getCurrentLearningPath(): LearningPath {
