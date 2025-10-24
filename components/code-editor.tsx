@@ -1,25 +1,75 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { RotateCcw, Play } from "lucide-react"
+import { evaluateCode, simpleCodeValidation } from "@/lib/code-evaluator"
+import type { TestCase } from "@/lib/types"
 
 interface CodeEditorProps {
   initialCode: string
-  onSubmit: (code: string) => void
+  onSubmit: (code: string, isCorrect: boolean) => void
+  onReload?: () => void
   isLoading?: boolean
+  testCases?: TestCase[]
 }
 
-export function CodeEditor({ initialCode, onSubmit, isLoading = false }: CodeEditorProps) {
+export function CodeEditor({ initialCode, onSubmit, onReload, isLoading = false, testCases = [] }: CodeEditorProps) {
   const [code, setCode] = useState(initialCode)
   const [charCount, setCharCount] = useState(initialCode.length)
+  const [isEvaluating, setIsEvaluating] = useState(false)
+  const [evaluationResult, setEvaluationResult] = useState<any>(null)
+
+  useEffect(() => {
+    setCode(initialCode)
+    setCharCount(initialCode.length)
+    setEvaluationResult(null)
+  }, [initialCode])
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newCode = e.target.value
     setCode(newCode)
     setCharCount(newCode.length)
+  }
+
+  const handleResetCode = () => {
+    setCode(initialCode)
+    setCharCount(initialCode.length)
+    setEvaluationResult(null)
+  }
+
+  const handleRunCode = async () => {
+    setIsEvaluating(true)
+    try {
+      let result
+      if (testCases.length > 0) {
+        result = await evaluateCode(code, testCases)
+      } else {
+        result = simpleCodeValidation(code, testCases)
+      }
+
+      setEvaluationResult(result)
+
+      // If all tests pass, submit the solution
+      if (result.passed) {
+        onSubmit(code, true)
+      }
+    } catch (error) {
+      console.error("[v0] Code evaluation error:", error)
+      setEvaluationResult({
+        passed: false,
+        totalTests: testCases.length,
+        passedTests: 0,
+        failedTests: testCases,
+        errors: ["Failed to evaluate code. Please try again."],
+        executionTime: 0,
+        output: "",
+      })
+    } finally {
+      setIsEvaluating(false)
+    }
   }
 
   return (
@@ -37,9 +87,58 @@ export function CodeEditor({ initialCode, onSubmit, isLoading = false }: CodeEdi
           spellCheck="false"
         />
       </Card>
-      <Button onClick={() => onSubmit(code)} disabled={isLoading} className="w-full" size="lg">
-        {isLoading ? "Submitting..." : "Submit Solution"}
-      </Button>
+
+      {evaluationResult && (
+        <Card
+          className={`p-4 ${evaluationResult.passed ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}
+        >
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className={`font-semibold ${evaluationResult.passed ? "text-green-800" : "text-red-800"}`}>
+                {evaluationResult.passed ? "All Tests Passed!" : "Tests Failed"}
+              </h4>
+              <span className={`text-sm ${evaluationResult.passed ? "text-green-700" : "text-red-700"}`}>
+                {evaluationResult.passedTests}/{evaluationResult.totalTests} passed
+              </span>
+            </div>
+            {evaluationResult.errors.length > 0 && (
+              <div className="text-sm space-y-1">
+                {evaluationResult.errors.map((error: string, idx: number) => (
+                  <p key={idx} className={evaluationResult.passed ? "text-green-700" : "text-red-700"}>
+                    • {error}
+                  </p>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Execution time: {evaluationResult.executionTime}ms</p>
+          </div>
+        </Card>
+      )}
+
+      <div className="flex gap-2">
+        <Button
+          onClick={handleRunCode}
+          disabled={isEvaluating || isLoading}
+          className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+          size="lg"
+        >
+          <Play className="w-4 h-4 mr-2" />
+          {isEvaluating ? "Running..." : "Run & Test"}
+        </Button>
+        <Button onClick={handleResetCode} variant="outline" size="lg" title="Reset code to starter template">
+          <RotateCcw className="w-4 h-4" />
+        </Button>
+      </div>
+      {onReload && (
+        <Button
+          onClick={onReload}
+          variant="outline"
+          className="w-full bg-transparent"
+          title="Load a different question of same difficulty"
+        >
+          Reload Question
+        </Button>
+      )}
     </div>
   )
 }

@@ -1,8 +1,10 @@
 import type { UserProfile, LearningPath, TopicStats } from "./types"
 import { predefinedLearningPaths } from "./question-templates"
+import { getCachedCSVQuestions, loadCSVDataset } from "./csv-loader"
 
 const USER_PROFILE_KEY = "neuro_user_profile"
 const LEARNING_PATH_KEY = "neuro_learning_path"
+const AI_QUESTIONS_CACHE_KEY = "neuro_ai_questions_cache"
 
 export function initializeUserProfile(): UserProfile {
   return {
@@ -17,6 +19,32 @@ export function initializeUserProfile(): UserProfile {
     streakCount: 0,
     lastActivityDate: Date.now(),
     totalTimeSpent: 0,
+    performanceMetrics: {
+      accuracy: 0,
+      speed: 0,
+      consistency: 0,
+      learningVelocity: 0,
+      confidenceLevel: 50,
+      errorPatterns: new Map(),
+      conceptMastery: new Map(),
+    },
+    learningAnalytics: {
+      totalSessionTime: 0,
+      sessionsCompleted: 0,
+      averageSessionDuration: 0,
+      peakPerformanceTime: "afternoon",
+      weakAreas: [],
+      strongAreas: [],
+      recommendedFocusAreas: [],
+      estimatedMasteryDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      learningStyle: "steady-learner",
+    },
+    adaptiveLevel: 1,
+    learningStyle: "steady-learner",
+    recommendedDailyGoal: 5,
+    lastAnalyticsUpdate: Date.now(),
+    customLearningPaths: [],
+    lastPathGenerationTime: Date.now(),
   }
 }
 
@@ -63,3 +91,96 @@ export function resetUserProgress(): void {
   if (typeof window === "undefined") return
   localStorage.removeItem(USER_PROFILE_KEY)
 }
+
+export function cacheAIQuestion(question: any): void {
+  if (typeof window === "undefined") return
+
+  const cache = localStorage.getItem(AI_QUESTIONS_CACHE_KEY)
+  const questions = cache ? JSON.parse(cache) : {}
+
+  const difficulty = question.difficulty || "medium"
+  if (!questions[difficulty]) {
+    questions[difficulty] = []
+  }
+
+  questions[difficulty].push({
+    ...question,
+    id: question.id || `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    topic: question.topic || "ai-generated",
+    subtopic: question.subtopic || "ai-generated",
+    type: question.type || "code-writing",
+    prerequisites: question.prerequisites || [],
+    estimatedTime: question.estimatedTime || 600,
+    difficulty: question.difficulty,
+  })
+
+  localStorage.setItem(AI_QUESTIONS_CACHE_KEY, JSON.stringify(questions))
+}
+
+export function getCachedAIQuestions(difficulty: "easy" | "medium" | "hard"): any[] {
+  if (typeof window === "undefined") return []
+
+  const cache = localStorage.getItem(AI_QUESTIONS_CACHE_KEY)
+  if (!cache) return []
+
+  const questions = JSON.parse(cache)
+  return questions[difficulty] || []
+}
+
+export function clearOldAIQuestionCache(): void {
+  if (typeof window === "undefined") return
+
+  const cache = localStorage.getItem(AI_QUESTIONS_CACHE_KEY)
+  if (!cache) return
+
+  const questions = JSON.parse(cache)
+  // Keep only last 20 questions per difficulty
+  Object.keys(questions).forEach((difficulty) => {
+    if (questions[difficulty].length > 20) {
+      questions[difficulty] = questions[difficulty].slice(-20)
+    }
+  })
+
+  localStorage.setItem(AI_QUESTIONS_CACHE_KEY, JSON.stringify(questions))
+}
+
+export function getAllAvailableQuestions(): any[] {
+  if (typeof window === "undefined") return []
+
+  const templateQuestions = localStorage.getItem("template_questions_cache")
+    ? JSON.parse(localStorage.getItem("template_questions_cache") || "[]")
+    : []
+
+  const csvQuestions = getCachedCSVQuestions()
+  const aiQuestions = localStorage.getItem(AI_QUESTIONS_CACHE_KEY)
+    ? JSON.parse(localStorage.getItem(AI_QUESTIONS_CACHE_KEY) || "{}")
+    : {}
+
+  // Flatten AI questions from difficulty-based structure
+  const flatAIQuestions = Object.values(aiQuestions).flat()
+
+  return [...templateQuestions, ...csvQuestions, ...flatAIQuestions]
+}
+
+export function initializeQuestionCache(): void {
+  if (typeof window === "undefined") return
+
+  const cached = localStorage.getItem(CSV_CACHE_KEY)
+  if (!cached) {
+    loadCSVDataset().then((questions) => {
+      if (questions.length > 0) {
+        const cacheData = {
+          version: "v1",
+          timestamp: Date.now(),
+          questions,
+        }
+        localStorage.setItem(CSV_CACHE_KEY, JSON.stringify(cacheData))
+        console.log(`[v0] Cached ${questions.length} CSV questions`)
+      }
+    })
+  }
+}
+
+const CSV_CACHE_KEY = "leetcode_csv_dataset_cache"
+
+export { loadCSVDataset }

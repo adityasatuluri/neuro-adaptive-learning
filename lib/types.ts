@@ -22,6 +22,28 @@ export interface TestCase {
   expectedOutput: string
 }
 
+export interface PerformanceMetrics {
+  accuracy: number // 0-100
+  speed: number // questions per hour
+  consistency: number // 0-100, how consistent performance is
+  learningVelocity: number // how fast user is improving
+  confidenceLevel: number // 0-100, user's confidence
+  errorPatterns: Map<string, number> // tracks common mistakes
+  conceptMastery: Map<string, number> // mastery per concept
+}
+
+export interface LearningAnalytics {
+  totalSessionTime: number
+  sessionsCompleted: number
+  averageSessionDuration: number
+  peakPerformanceTime: string // time of day when user performs best
+  weakAreas: string[] // topics/concepts needing improvement
+  strongAreas: string[] // topics/concepts user excels at
+  recommendedFocusAreas: string[]
+  estimatedMasteryDate: number // when user will master current topic
+  learningStyle: "fast-learner" | "steady-learner" | "struggling" // adaptive classification
+}
+
 export interface UserProgress {
   questionId: string
   attempts: number
@@ -29,9 +51,16 @@ export interface UserProgress {
   correct: boolean
   submittedCode: string
   timestamp: number
-  nextReviewDate?: number // For spaced repetition
+  nextReviewDate?: number
   reviewCount: number
   difficulty: "easy" | "medium" | "hard"
+  confidence: number // 0-100, user's confidence before attempt
+  hintUsed: boolean
+  hintCount: number
+  conceptsInvolved: string[] // which concepts this question tests
+  errorType?: string // type of error made (syntax, logic, edge-case, etc.)
+  timeToFirstAttempt: number // time before first submission
+  attemptSequence: Array<{ correct: boolean; timeSpent: number }> // all attempts
 }
 
 export interface TopicStats {
@@ -41,7 +70,14 @@ export interface TopicStats {
   averageAccuracy: number
   averageTimePerQuestion: number
   lastAttemptDate: number
-  masteryLevel: number // 0-100
+  masteryLevel: number
+  conceptBreakdown: Map<string, { attempted: number; correct: number }> // per-concept stats
+  difficultyProgression: { easy: number; medium: number; hard: number } // questions per difficulty
+  consistencyScore: number // 0-100, how consistent performance is
+  improvementRate: number // percentage improvement over time
+  estimatedTimeToMastery: number // milliseconds until mastery
+  weakConcepts: string[]
+  strongConcepts: string[]
 }
 
 export interface UserProfile {
@@ -56,6 +92,14 @@ export interface UserProfile {
   streakCount: number
   lastActivityDate: number
   totalTimeSpent: number
+  performanceMetrics: PerformanceMetrics
+  learningAnalytics: LearningAnalytics
+  adaptiveLevel: number // 1-10, overall adaptive difficulty level
+  learningStyle: "fast-learner" | "steady-learner" | "struggling"
+  recommendedDailyGoal: number // questions per day
+  lastAnalyticsUpdate: number
+  customLearningPaths: LearningPath[]
+  lastPathGenerationTime: number
 }
 
 export interface LearningPath {

@@ -10,8 +10,19 @@ import { LearningPathSelector } from "@/components/learning-path-selector"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { questionTemplates, predefinedLearningPaths } from "@/lib/question-templates"
-import { getUserProfile, saveUserProfile, getCurrentLearningPath, setCurrentLearningPath } from "@/lib/storage"
-import { updateUserProfile, selectNextQuestion } from "@/lib/adaptive-algorithm"
+import {
+  getUserProfile,
+  saveUserProfile,
+  getCurrentLearningPath,
+  setCurrentLearningPath,
+  cacheAIQuestion,
+  clearOldAIQuestionCache,
+  initializeQuestionCache,
+  loadCSVDataset,
+} from "@/lib/storage"
+import { updateUserProfile, selectNextQuestion, selectRandomQuestionSameDifficulty } from "@/lib/adaptive-algorithm"
+import { generateQuestionByDifficulty } from "@/app/actions/generate-question"
+import { generatePersonalizedLearningPath, shouldRegenerateLearningPath } from "@/lib/dynamic-learning-paths"
 import type { Question, UserProfile } from "@/lib/types"
 
 export default function Home() {
@@ -21,13 +32,55 @@ export default function Home() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [showPathSelector, setShowPathSelector] = useState(false)
   const [startTime, setStartTime] = useState<number>(0)
+  const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
+  const [isGeneratingPath, setIsGeneratingPath] = useState(false)
 
   // Initialize user profile and load first question
   useEffect(() => {
     const userProfile = getUserProfile()
     setProfile(userProfile)
+
+    initializeQuestionCache()
+
+    loadCSVDataset().catch((error) => {
+      console.error("[v0] Error loading CSV dataset:", error)
+    })
+
+    if (shouldRegenerateLearningPath(userProfile, userProfile.lastPathGenerationTime)) {
+      generateAndUpdateLearningPath(userProfile)
+    }
+
     loadNextQuestion(userProfile)
   }, [])
+
+  const generateAndUpdateLearningPath = async (userProfile: UserProfile) => {
+    setIsGeneratingPath(true)
+    try {
+      const newPath = await generatePersonalizedLearningPath(userProfile)
+      if (newPath) {
+        const updatedProfile = {
+          ...userProfile,
+          customLearningPaths: [...userProfile.customLearningPaths, newPath],
+          lastPathGenerationTime: Date.now(),
+        }
+        setProfile(updatedProfile)
+        saveUserProfile(updatedProfile)
+        setFeedback({
+          type: "success",
+          message: `New personalized learning path generated: ${newPath.name}`,
+        })
+        setTimeout(() => setFeedback(null), 3000)
+      }
+    } catch (error) {
+      console.error("[v0] Error generating learning path:", error)
+      setFeedback({
+        type: "error",
+        message: "Failed to generate personalized learning path",
+      })
+    } finally {
+      setIsGeneratingPath(false)
+    }
+  }
 
   const loadNextQuestion = (userProfile: UserProfile) => {
     const currentPath = getCurrentLearningPath()
@@ -51,17 +104,27 @@ export default function Home() {
     setFeedback(null)
   }
 
-  const handleSubmitCode = async (code: string) => {
+  const handleReloadQuestion = () => {
+    if (!profile || !currentQuestion) return
+
+    const currentPath = getCurrentLearningPath()
+    const topic = currentQuestion.topic
+
+    const newQuestion = selectRandomQuestionSameDifficulty(questionTemplates, profile, topic, currentQuestion.id)
+
+    if (newQuestion) {
+      setCurrentQuestion(newQuestion)
+      setStartTime(Date.now())
+      setFeedback(null)
+    }
+  }
+
+  const handleSubmitCode = async (code: string, isCorrect: boolean) => {
     if (!currentQuestion || !profile) return
 
     setIsSubmitting(true)
 
-    // Simulate code execution delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
     const timeSpent = Math.round((Date.now() - startTime) / 1000)
-
-    const isCorrect = code.includes("def") && code.trim().length > 20
 
     const updatedProfile = updateUserProfile(profile, currentQuestion, isCorrect, timeSpent, code)
 
@@ -97,6 +160,59 @@ export default function Home() {
     setShowPathSelector(false)
   }
 
+  const handleGenerateAIQuestion = async () => {
+    if (!profile) return
+
+    setIsGeneratingQuestion(true)
+    try {
+      const currentPath = getCurrentLearningPath()
+      const topic = currentPath.topics[0]
+
+      const generatedQuestion = await generateQuestionByDifficulty(profile.currentDifficulty, topic)
+
+      if (generatedQuestion) {
+        const aiQuestion = {
+          ...generatedQuestion,
+          id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          difficulty: profile.currentDifficulty,
+          topic: topic,
+          subtopic: "ai-generated",
+          type: "code-writing" as const,
+          prerequisites: [],
+          estimatedTime: 600,
+        }
+
+        // Cache it for future use
+        cacheAIQuestion(aiQuestion)
+        clearOldAIQuestionCache()
+
+        setCurrentQuestion(aiQuestion)
+        setStartTime(Date.now())
+        setFeedback({
+          type: "success",
+          message: "AI question generated and loaded!",
+        })
+
+        setTimeout(() => {
+          setFeedback(null)
+        }, 2000)
+      } else {
+        setFeedback({
+          type: "error",
+          message: "Failed to generate question. Please ensure Ollama is running locally.",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error generating AI question:", error)
+      setFeedback({
+        type: "error",
+        message: "Error generating question. Check Ollama connection.",
+      })
+    } finally {
+      setIsGeneratingQuestion(false)
+    }
+  }
+
   if (!profile || !currentQuestion) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -120,9 +236,14 @@ export default function Home() {
               Master Python through personalized, adaptive coding challenges • Path: {currentPath.name}
             </p>
           </div>
-          <Link href="/analytics">
-            <Button variant="outline">View Analytics</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/analytics">
+              <Button variant="outline">View Analytics</Button>
+            </Link>
+            <Link href="/test-dashboard">
+              <Button variant="outline">Run Tests</Button>
+            </Link>
+          </div>
         </div>
 
         {/* Progress Stats */}
@@ -139,7 +260,9 @@ export default function Home() {
               <CodeEditor
                 initialCode={currentQuestion.starterCode}
                 onSubmit={handleSubmitCode}
+                onReload={handleReloadQuestion}
                 isLoading={isSubmitting}
+                testCases={currentQuestion.testCases}
               />
             </div>
 
@@ -188,13 +311,29 @@ export default function Home() {
               </div>
             </Card>
 
+            <Button
+              onClick={handleGenerateAIQuestion}
+              disabled={isGeneratingQuestion}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              {isGeneratingQuestion ? "Generating..." : "Generate AI Question"}
+            </Button>
+
+            <Button
+              onClick={() => generateAndUpdateLearningPath(profile)}
+              disabled={isGeneratingPath}
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            >
+              {isGeneratingPath ? "Generating Path..." : "Generate Learning Path"}
+            </Button>
+
             <Button onClick={() => setShowPathSelector(!showPathSelector)} variant="outline" className="w-full">
               {showPathSelector ? "Hide Paths" : "Change Learning Path"}
             </Button>
 
             {showPathSelector && (
               <LearningPathSelector
-                paths={predefinedLearningPaths}
+                paths={[...predefinedLearningPaths, ...profile.customLearningPaths]}
                 currentPathId={profile.currentLearningPath}
                 onSelectPath={handlePathChange}
               />
