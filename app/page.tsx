@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { QuestionDisplay } from "@/components/question-display"
-import { CodeEditor } from "@/components/code-editor"
+import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { ProgressStats } from "@/components/progress-stats"
 import { TopicMastery } from "@/components/topic-mastery"
 import { LearningPathSelector } from "@/components/learning-path-selector"
@@ -257,12 +257,13 @@ export default function Home() {
           <div className="lg:col-span-2">
             <QuestionDisplay question={currentQuestion} />
             <div className="mt-6">
-              <CodeEditor
+              <AdvancedCodeEditor
                 initialCode={currentQuestion.starterCode}
                 onSubmit={handleSubmitCode}
                 onReload={handleReloadQuestion}
                 isLoading={isSubmitting}
                 testCases={currentQuestion.testCases}
+                language="python"
               />
             </div>
 

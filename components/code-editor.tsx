@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { RotateCcw, Play } from "lucide-react"
+import { RotateCcw, Play, CheckCircle2, XCircle } from "lucide-react"
 import { evaluateCode, simpleCodeValidation } from "@/lib/code-evaluator"
 import type { TestCase } from "@/lib/types"
 
@@ -72,6 +72,10 @@ export function CodeEditor({ initialCode, onSubmit, onReload, isLoading = false,
     }
   }
 
+  const passPercentage = evaluationResult
+    ? Math.round((evaluationResult.passedTests / evaluationResult.totalTests) * 100)
+    : 0
+
   return (
     <div className="space-y-4">
       <Card className="p-4 bg-muted">
@@ -90,26 +94,54 @@ export function CodeEditor({ initialCode, onSubmit, onReload, isLoading = false,
 
       {evaluationResult && (
         <Card
-          className={`p-4 ${evaluationResult.passed ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}
+          className={`p-4 border-2 ${
+            evaluationResult.passed ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+          }`}
         >
-          <div className="space-y-2">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className={`font-semibold ${evaluationResult.passed ? "text-green-800" : "text-red-800"}`}>
-                {evaluationResult.passed ? "All Tests Passed!" : "Tests Failed"}
-              </h4>
-              <span className={`text-sm ${evaluationResult.passed ? "text-green-700" : "text-red-700"}`}>
+              <div className="flex items-center gap-2">
+                {evaluationResult.passed ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-600" />
+                )}
+                <h4 className={`font-semibold text-lg ${evaluationResult.passed ? "text-green-800" : "text-red-800"}`}>
+                  {evaluationResult.passed ? "All Tests Passed!" : "Tests Failed"}
+                </h4>
+              </div>
+              <span
+                className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                  evaluationResult.passed ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"
+                }`}
+              >
                 {evaluationResult.passedTests}/{evaluationResult.totalTests} passed
               </span>
             </div>
+
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${evaluationResult.passed ? "bg-green-600" : "bg-red-600"}`}
+                style={{ width: `${passPercentage}%` }}
+              />
+            </div>
+
             {evaluationResult.errors.length > 0 && (
-              <div className="text-sm space-y-1">
+              <div className="space-y-2">
                 {evaluationResult.errors.map((error: string, idx: number) => (
-                  <p key={idx} className={evaluationResult.passed ? "text-green-700" : "text-red-700"}>
-                    • {error}
-                  </p>
+                  <div
+                    key={idx}
+                    className={`text-sm p-2 rounded flex items-start gap-2 ${
+                      evaluationResult.passed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    <span className="mt-0.5">•</span>
+                    <span>{error}</span>
+                  </div>
                 ))}
               </div>
             )}
+
             <p className="text-xs text-muted-foreground">Execution time: {evaluationResult.executionTime}ms</p>
           </div>
         </Card>
