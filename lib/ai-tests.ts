@@ -2,12 +2,14 @@
 import { runTestSuite, assert, validators } from "./test-framework"
 import { generateQuestionByDifficulty, generateLearningPath, generateQuestionsByBatch } from "./ollama-client"
 
+const DEFAULT_MODEL = "grok-oss:120b-cloud"
+
 export async function runAIGenerationTests() {
   return runTestSuite("AI Generation Tests", [
     [
       "Generate easy question",
       async () => {
-        const question = await generateQuestionByDifficulty("easy", "basics")
+        const question = await generateQuestionByDifficulty("easy", "basics", DEFAULT_MODEL)
         assert.isNotNull(question, "Question should not be null")
         assert.isTrue(validators.isValidQuestion(question), "Question should be valid")
         assert.equal(question?.difficulty, "easy", "Difficulty should be easy")
@@ -17,7 +19,7 @@ export async function runAIGenerationTests() {
     [
       "Generate medium question",
       async () => {
-        const question = await generateQuestionByDifficulty("medium", "functions")
+        const question = await generateQuestionByDifficulty("medium", "functions", DEFAULT_MODEL)
         assert.isNotNull(question, "Question should not be null")
         assert.isTrue(validators.isValidQuestion(question), "Question should be valid")
         assert.equal(question?.difficulty, "medium", "Difficulty should be medium")
@@ -27,7 +29,7 @@ export async function runAIGenerationTests() {
     [
       "Generate hard question",
       async () => {
-        const question = await generateQuestionByDifficulty("hard", "algorithms")
+        const question = await generateQuestionByDifficulty("hard", "algorithms", DEFAULT_MODEL)
         assert.isNotNull(question, "Question should not be null")
         assert.isTrue(validators.isValidQuestion(question), "Question should be valid")
         assert.equal(question?.difficulty, "hard", "Difficulty should be hard")
@@ -37,7 +39,7 @@ export async function runAIGenerationTests() {
     [
       "Generate learning path for beginner",
       async () => {
-        const path = await generateLearningPath("beginner", ["loops", "functions"], ["basics"])
+        const path = await generateLearningPath("beginner", ["loops", "functions"], ["basics"], DEFAULT_MODEL)
         assert.isNotNull(path, "Learning path should not be null")
         assert.isTrue(validators.isValidLearningPath(path), "Learning path should be valid")
         assert.equal(path?.topics.length > 0, true, "Path should have topics")
@@ -47,7 +49,7 @@ export async function runAIGenerationTests() {
     [
       "Generate learning path for intermediate",
       async () => {
-        const path = await generateLearningPath("intermediate", ["oop"], ["functions", "loops"])
+        const path = await generateLearningPath("intermediate", ["oop"], ["functions", "loops"], DEFAULT_MODEL)
         assert.isNotNull(path, "Learning path should not be null")
         assert.isTrue(validators.isValidLearningPath(path), "Learning path should be valid")
       },
@@ -56,7 +58,7 @@ export async function runAIGenerationTests() {
     [
       "Generate batch of questions",
       async () => {
-        const questions = await generateQuestionsByBatch("easy", 3, "basics")
+        const questions = await generateQuestionsByBatch("easy", 3, "basics", DEFAULT_MODEL)
         assert.equal(questions.length, 3, "Should generate 3 questions")
         questions.forEach((q) => {
           assert.isTrue(validators.isValidQuestion(q), "Each question should be valid")
@@ -67,7 +69,7 @@ export async function runAIGenerationTests() {
     [
       "Question has required fields",
       async () => {
-        const question = await generateQuestionByDifficulty("medium")
+        const question = await generateQuestionByDifficulty("medium", undefined, DEFAULT_MODEL)
         assert.isNotNull(question?.title, "Question should have title")
         assert.isNotNull(question?.description, "Question should have description")
         assert.isTrue(Array.isArray(question?.hints), "Question should have hints array")
@@ -80,7 +82,7 @@ export async function runAIGenerationTests() {
     [
       "Learning path has focus areas",
       async () => {
-        const path = await generateLearningPath("beginner", ["loops"], [])
+        const path = await generateLearningPath("beginner", ["loops"], [], DEFAULT_MODEL)
         assert.isTrue(Array.isArray(path?.focusAreas), "Path should have focus areas")
         assert.isTrue(path?.focusAreas.length > 0, "Path should have at least one focus area")
       },

@@ -3,12 +3,30 @@
 import type { UserProfile } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { useState } from "react"
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts"
 
 interface AnalyticsDashboardProps {
   profile: UserProfile
 }
 
 export function AnalyticsDashboard({ profile }: AnalyticsDashboardProps) {
+  const [selectedGraph, setSelectedGraph] = useState<"performance" | "difficulty" | "progress" | "time">("performance")
+
   const successRate =
     profile.totalQuestionsAttempted > 0 ? (profile.correctAnswers / profile.totalQuestionsAttempted) * 100 : 0
 
@@ -25,6 +43,29 @@ export function AnalyticsDashboard({ profile }: AnalyticsDashboardProps) {
   const easyCount = profile.progressHistory.filter((p) => p.difficulty === "easy").length
   const mediumCount = profile.progressHistory.filter((p) => p.difficulty === "medium").length
   const hardCount = profile.progressHistory.filter((p) => p.difficulty === "hard").length
+
+  const performanceData = profile.progressHistory.slice(-20).map((attempt, idx) => ({
+    attempt: idx + 1,
+    correct: attempt.correct ? 100 : 0,
+    timeSpent: attempt.timeSpent,
+  }))
+
+  const difficultyData = [
+    { name: "Easy", value: easyCount, fill: "#22c55e" },
+    { name: "Medium", value: mediumCount, fill: "#eab308" },
+    { name: "Hard", value: hardCount, fill: "#ef4444" },
+  ]
+
+  const progressData = profile.progressHistory.slice(-15).map((attempt, idx) => ({
+    attempt: idx + 1,
+    difficulty: attempt.difficulty === "easy" ? 1 : attempt.difficulty === "medium" ? 2 : 3,
+    correct: attempt.correct ? 1 : 0,
+  }))
+
+  const timeData = profile.progressHistory.slice(-10).map((attempt, idx) => ({
+    attempt: idx + 1,
+    timeSpent: attempt.timeSpent,
+  }))
 
   return (
     <div className="space-y-6">
@@ -72,6 +113,109 @@ export function AnalyticsDashboard({ profile }: AnalyticsDashboardProps) {
         </Card>
       </div>
 
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-foreground">Analytics Visualization</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedGraph("performance")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                selectedGraph === "performance"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Performance
+            </button>
+            <button
+              onClick={() => setSelectedGraph("difficulty")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                selectedGraph === "difficulty"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Difficulty
+            </button>
+            <button
+              onClick={() => setSelectedGraph("progress")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                selectedGraph === "progress"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Progress
+            </button>
+            <button
+              onClick={() => setSelectedGraph("time")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                selectedGraph === "time"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Time
+            </button>
+          </div>
+        </div>
+
+        {selectedGraph === "performance" && (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={performanceData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="attempt" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="correct" stroke="#22c55e" name="Correct %" />
+              <Line type="monotone" dataKey="timeSpent" stroke="#3b82f6" name="Time (s)" />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+
+        {selectedGraph === "difficulty" && (
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={difficultyData} cx="50%" cy="50%" labelLine={false} label dataKey="value">
+                {difficultyData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
+
+        {selectedGraph === "progress" && (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={progressData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="attempt" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="difficulty" fill="#8b5cf6" name="Difficulty Level" />
+              <Bar dataKey="correct" fill="#22c55e" name="Correct" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+
+        {selectedGraph === "time" && (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={timeData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="attempt" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="timeSpent" stroke="#f59e0b" name="Time Spent (s)" />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </Card>
+
       {/* Difficulty Distribution */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">Difficulty Distribution</h3>
@@ -112,32 +256,6 @@ export function AnalyticsDashboard({ profile }: AnalyticsDashboardProps) {
               />
             </div>
           </div>
-        </div>
-      </Card>
-
-      {/* Recent Activity */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
-        <div className="space-y-2">
-          {recentAttempts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent activity</p>
-          ) : (
-            recentAttempts
-              .slice()
-              .reverse()
-              .map((attempt, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${attempt.correct ? "bg-green-500" : "bg-red-500"}`} />
-                    <span className="text-sm text-foreground">Question {attempt.questionId.slice(-2)}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs text-muted-foreground">{attempt.timeSpent}s</span>
-                    <span className="text-xs font-semibold capitalize text-foreground">{attempt.difficulty}</span>
-                  </div>
-                </div>
-              ))
-          )}
         </div>
       </Card>
     </div>

@@ -6,15 +6,14 @@ import { QuestionDisplay } from "@/components/question-display"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { ProgressStats } from "@/components/progress-stats"
 import { TopicMastery } from "@/components/topic-mastery"
-import { LearningPathSelector } from "@/components/learning-path-selector"
+import { ModelSelector } from "@/components/model-selector"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { questionTemplates, predefinedLearningPaths } from "@/lib/question-templates"
+import { questionTemplates } from "@/lib/question-templates"
 import {
   getUserProfile,
   saveUserProfile,
   getCurrentLearningPath,
-  setCurrentLearningPath,
   cacheAIQuestion,
   clearOldAIQuestionCache,
   initializeQuestionCache,
@@ -22,7 +21,6 @@ import {
 } from "@/lib/storage"
 import { updateUserProfile, selectNextQuestion, selectRandomQuestionSameDifficulty } from "@/lib/adaptive-algorithm"
 import { generateQuestionByDifficulty } from "@/app/actions/generate-question"
-import { generatePersonalizedLearningPath, shouldRegenerateLearningPath } from "@/lib/dynamic-learning-paths"
 import type { Question, UserProfile } from "@/lib/types"
 
 export default function Home() {
@@ -30,10 +28,9 @@ export default function Home() {
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
-  const [showPathSelector, setShowPathSelector] = useState(false)
   const [startTime, setStartTime] = useState<number>(0)
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
-  const [isGeneratingPath, setIsGeneratingPath] = useState(false)
+  const [selectedModel, setSelectedModel] = useState("grok-oss:120b-cloud")
 
   // Initialize user profile and load first question
   useEffect(() => {
@@ -46,41 +43,8 @@ export default function Home() {
       console.error("[v0] Error loading CSV dataset:", error)
     })
 
-    if (shouldRegenerateLearningPath(userProfile, userProfile.lastPathGenerationTime)) {
-      generateAndUpdateLearningPath(userProfile)
-    }
-
     loadNextQuestion(userProfile)
   }, [])
-
-  const generateAndUpdateLearningPath = async (userProfile: UserProfile) => {
-    setIsGeneratingPath(true)
-    try {
-      const newPath = await generatePersonalizedLearningPath(userProfile)
-      if (newPath) {
-        const updatedProfile = {
-          ...userProfile,
-          customLearningPaths: [...userProfile.customLearningPaths, newPath],
-          lastPathGenerationTime: Date.now(),
-        }
-        setProfile(updatedProfile)
-        saveUserProfile(updatedProfile)
-        setFeedback({
-          type: "success",
-          message: `New personalized learning path generated: ${newPath.name}`,
-        })
-        setTimeout(() => setFeedback(null), 3000)
-      }
-    } catch (error) {
-      console.error("[v0] Error generating learning path:", error)
-      setFeedback({
-        type: "error",
-        message: "Failed to generate personalized learning path",
-      })
-    } finally {
-      setIsGeneratingPath(false)
-    }
-  }
 
   const loadNextQuestion = (userProfile: UserProfile) => {
     const currentPath = getCurrentLearningPath()
@@ -149,18 +113,7 @@ export default function Home() {
     setIsSubmitting(false)
   }
 
-  const handlePathChange = (pathId: string) => {
-    setCurrentLearningPath(pathId)
-    if (profile) {
-      const updatedProfile = { ...profile, currentLearningPath: pathId }
-      setProfile(updatedProfile)
-      saveUserProfile(updatedProfile)
-      loadNextQuestion(updatedProfile)
-    }
-    setShowPathSelector(false)
-  }
-
-  const handleGenerateAIQuestion = async () => {
+  const handleGenerateQuestion = async () => {
     if (!profile) return
 
     setIsGeneratingQuestion(true)
@@ -168,7 +121,7 @@ export default function Home() {
       const currentPath = getCurrentLearningPath()
       const topic = currentPath.topics[0]
 
-      const generatedQuestion = await generateQuestionByDifficulty(profile.currentDifficulty, topic)
+      const generatedQuestion = await generateQuestionByDifficulty(profile.currentDifficulty, topic, selectedModel)
 
       if (generatedQuestion) {
         const aiQuestion = {
@@ -190,7 +143,7 @@ export default function Home() {
         setStartTime(Date.now())
         setFeedback({
           type: "success",
-          message: "AI question generated and loaded!",
+          message: "Question generated successfully!",
         })
 
         setTimeout(() => {
@@ -203,7 +156,7 @@ export default function Home() {
         })
       }
     } catch (error) {
-      console.error("[v0] Error generating AI question:", error)
+      console.error("[v0] Error generating question:", error)
       setFeedback({
         type: "error",
         message: "Error generating question. Check Ollama connection.",
@@ -231,17 +184,12 @@ export default function Home() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">Neuro Adaptive Learning</h1>
-            <p className="text-muted-foreground">
-              Master Python through personalized, adaptive coding challenges • Path: {currentPath.name}
-            </p>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Code Learning Platform</h1>
+            <p className="text-muted-foreground">Master Python through adaptive coding challenges</p>
           </div>
           <div className="flex gap-2">
             <Link href="/analytics">
               <Button variant="outline">View Analytics</Button>
-            </Link>
-            <Link href="/test-dashboard">
-              <Button variant="outline">Run Tests</Button>
             </Link>
           </div>
         </div>
@@ -283,6 +231,9 @@ export default function Home() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Model Selector */}
+            <ModelSelector selectedModel={selectedModel} onModelChange={setSelectedModel} />
+
             {/* Topic Mastery */}
             <TopicMastery profile={profile} learningPathTopics={currentPath.topics} />
 
@@ -313,32 +264,12 @@ export default function Home() {
             </Card>
 
             <Button
-              onClick={handleGenerateAIQuestion}
+              onClick={handleGenerateQuestion}
               disabled={isGeneratingQuestion}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
-              {isGeneratingQuestion ? "Generating..." : "Generate AI Question"}
+              {isGeneratingQuestion ? "Generating..." : "Generate Question"}
             </Button>
-
-            <Button
-              onClick={() => generateAndUpdateLearningPath(profile)}
-              disabled={isGeneratingPath}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-            >
-              {isGeneratingPath ? "Generating Path..." : "Generate Learning Path"}
-            </Button>
-
-            <Button onClick={() => setShowPathSelector(!showPathSelector)} variant="outline" className="w-full">
-              {showPathSelector ? "Hide Paths" : "Change Learning Path"}
-            </Button>
-
-            {showPathSelector && (
-              <LearningPathSelector
-                paths={[...predefinedLearningPaths, ...profile.customLearningPaths]}
-                currentPathId={profile.currentLearningPath}
-                onSelectPath={handlePathChange}
-              />
-            )}
 
             <Button
               onClick={() => {

@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold text-foreground mb-2">Learning Analytics</h1>
-            <p className="text-muted-foreground">Track your progress and performance insights</p>
+            <p className="text-muted-foreground">Track your progress with customizable visualizations</p>
           </div>
           <Link href="/">
             <Button>Back to Learning</Button>
