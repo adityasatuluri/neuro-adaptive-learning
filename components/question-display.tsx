@@ -85,7 +85,7 @@ export function QuestionDisplay({ question, onSolutionView }: QuestionDisplayPro
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
             <h3 className="font-semibold text-blue-900 mb-2">Solution</h3>
             <pre className="bg-white p-3 rounded border border-blue-100 overflow-x-auto text-sm font-mono text-foreground">
-              {question.starterCode}
+              {question.solutionCode || question.starterCode}
             </pre>
             <p className="text-xs text-blue-700 mt-2">
               ⚠️ Viewing the solution will negatively impact your progress score for this question.

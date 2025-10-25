@@ -9,6 +9,7 @@ export interface Question {
   description: string
   type: QuestionType
   starterCode: string
+  solutionCode?: string
   testCases: TestCase[]
   expectedOutput: string
   hints: string[]

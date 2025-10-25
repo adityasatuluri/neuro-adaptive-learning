@@ -41,6 +41,7 @@ const questionSchema = z.object({
   title: z.string(),
   description: z.string(),
   starterCode: z.string(),
+  solutionCode: z.string(),
   expectedOutput: z.string(),
   hints: z.array(z.string()),
   testCases: z.array(
@@ -239,17 +240,19 @@ ${weakConceptsText}
 Create a question with:
 1. A clear, engaging title
 2. Detailed description of what to solve
-3. Starter code template
-4. Expected output
-5. 3-4 helpful hints
-6. 2-3 test cases with inputs and expected outputs
-7. Relevant tags
+3. Starter code template (incomplete, for the user to fill in)
+4. Complete solution code (the full working solution)
+5. Expected output
+6. 3-4 helpful hints
+7. 2-3 test cases with inputs and expected outputs
+8. Relevant tags
 
 Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
 {
   "title": "string",
   "description": "string",
   "starterCode": "string",
+  "solutionCode": "string",
   "expectedOutput": "string",
   "hints": ["string", "string", "string"],
   "testCases": [{"input": "string", "expectedOutput": "string"}],
@@ -300,17 +303,19 @@ ${topicContext}
 Create a question with:
 1. A clear, engaging title
 2. Detailed description of what to solve
-3. Starter code template
-4. Expected output
-5. 3-4 helpful hints
-6. 2-3 test cases with inputs and expected outputs
-7. Relevant tags
+3. Starter code template (incomplete, for the user to fill in)
+4. Complete solution code (the full working solution)
+5. Expected output
+6. 3-4 helpful hints
+7. 2-3 test cases with inputs and expected outputs
+8. Relevant tags
 
 Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
 {
   "title": "string",
   "description": "string",
   "starterCode": "string",
+  "solutionCode": "string",
   "expectedOutput": "string",
   "hints": ["string", "string", "string"],
   "testCases": [{"input": "string", "expectedOutput": "string"}],
