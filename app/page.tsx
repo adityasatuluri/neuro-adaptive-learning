@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { QuestionDisplay } from "@/components/question-display"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { ProgressStats } from "@/components/progress-stats"
-import { TopicMastery } from "@/components/topic-mastery"
 import { ModelSelector } from "@/components/model-selector"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -118,6 +117,11 @@ export default function Home() {
             loadNextQuestion(updatedProfile)
           }, 2000)
         } else {
+          const timeSpent = Math.round((Date.now() - startTime) / 1000)
+          const updatedProfile = updateUserProfile(profile, currentQuestion, false, timeSpent, code)
+          setProfile(updatedProfile)
+          saveUserProfile(updatedProfile)
+
           setFeedback({
             type: "error",
             message: "Code validation failed. Try again!",
@@ -233,6 +237,7 @@ export default function Home() {
                 isLoading={isSubmitting}
                 testCases={currentQuestion.testCases}
                 language="python"
+                isValidating={isValidatingCode}
               />
             </div>
 
@@ -258,9 +263,6 @@ export default function Home() {
           <div className="space-y-6">
             {/* Model Selector */}
             <ModelSelector selectedModel={selectedModel} onModelChange={setSelectedModel} />
-
-            {/* Topic Mastery */}
-            <TopicMastery profile={profile} learningPathTopics={currentPath.topics} />
 
             {/* Quick Stats */}
             <Card className="p-4">

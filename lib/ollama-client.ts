@@ -186,6 +186,101 @@ function sanitizeJsonString(str: string): string {
     .replace(/:\s*"/g, ': "')
 }
 
+export async function generateAdaptiveQuestion(
+  userProfile: any,
+  difficulty: "easy" | "medium" | "hard",
+  topic?: string,
+  model: string = OLLAMA_MODEL,
+): Promise<GeneratedQuestion | null> {
+  const recentAttempts = userProfile.progressHistory.slice(-10)
+  const recentAccuracy =
+    recentAttempts.length > 0 ? (recentAttempts.filter((a: any) => a.correct).length / recentAttempts.length) * 100 : 0
+
+  let adaptiveGuidance = ""
+
+  // If accuracy >= 80%, increase complexity
+  if (recentAccuracy >= 80) {
+    adaptiveGuidance = "This should be a challenging problem that requires advanced thinking and optimization."
+  }
+  // If accuracy < 60%, revisit weaker areas
+  else if (recentAccuracy < 60) {
+    adaptiveGuidance = "This should focus on fundamental concepts and be easier to build confidence."
+  }
+  // Otherwise, maintain current difficulty
+  else {
+    adaptiveGuidance = "This should be a balanced problem that reinforces current skills."
+  }
+
+  // Identify weak concepts from error patterns
+  const errorPatterns = userProfile.performanceMetrics?.errorPatterns || new Map()
+  const weakConcepts = Array.from(errorPatterns.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map((entry) => entry[0])
+
+  const weakConceptsText =
+    weakConcepts.length > 0
+      ? `Incorporate these concepts that the user struggles with: ${weakConcepts.join(", ")}.`
+      : ""
+
+  const difficultyGuides = {
+    easy: "beginner-friendly, 2-5 minutes, basic syntax, simple concepts",
+    medium: "intermediate, 5-15 minutes, data structures, some algorithmic thinking",
+    hard: "advanced, 15-30 minutes, complex algorithms, optimization required",
+  }
+
+  const topicContext = topic ? `Focus on the topic: ${topic}.` : ""
+
+  const prompt = `Generate a unique Python coding question that is ${difficultyGuides[difficulty]}.
+${topicContext}
+${adaptiveGuidance}
+${weakConceptsText}
+
+Create a question with:
+1. A clear, engaging title
+2. Detailed description of what to solve
+3. Starter code template
+4. Expected output
+5. 3-4 helpful hints
+6. 2-3 test cases with inputs and expected outputs
+7. Relevant tags
+
+Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
+{
+  "title": "string",
+  "description": "string",
+  "starterCode": "string",
+  "expectedOutput": "string",
+  "hints": ["string", "string", "string"],
+  "testCases": [{"input": "string", "expectedOutput": "string"}],
+  "tags": ["string"]
+}`
+
+  const response = await callOllama(prompt, model)
+  if (!response) {
+    console.error("[v0] No response from Ollama for adaptive question generation")
+    return null
+  }
+
+  const jsonStr = extractJsonFromResponse(response)
+  if (!jsonStr) {
+    console.error("[v0] Could not extract JSON from response")
+    return null
+  }
+
+  try {
+    const sanitized = sanitizeJsonString(jsonStr)
+    console.log("[v0] Sanitized JSON:", sanitized.substring(0, 100) + "...")
+    const parsed = JSON.parse(sanitized)
+    const validated = questionSchema.parse(parsed)
+    console.log("[v0] Adaptive question generated successfully")
+    return validated
+  } catch (error) {
+    console.error("[v0] Adaptive question parsing error:", error)
+    return null
+  }
+}
+
 export async function generateQuestionByDifficulty(
   difficulty: "easy" | "medium" | "hard",
   topic?: string,

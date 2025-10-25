@@ -3,6 +3,7 @@
 import type { UserProfile } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { formatDuration, formatAverageTime } from "@/lib/time-formatter"
 
 interface ProgressStatsProps {
   profile: UserProfile
@@ -12,8 +13,8 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
   const successRate =
     profile.totalQuestionsAttempted > 0 ? (profile.correctAnswers / profile.totalQuestionsAttempted) * 100 : 0
 
-  const avgMinutes = Math.round(profile.averageTimePerQuestion / 60)
-  const totalHours = Math.round(profile.totalTimeSpent / 3600)
+  const avgTimeFormatted = formatAverageTime(profile.averageTimePerQuestion)
+  const totalTimeFormatted = formatDuration(profile.totalTimeSpent)
 
   // Calculate progress to next difficulty level based on accuracy and attempts
   const getProgressToNextDifficulty = () => {
@@ -92,12 +93,12 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
 
       <Card className="p-4">
         <p className="text-sm text-muted-foreground mb-2">Avg Time</p>
-        <p className="text-2xl font-bold text-foreground">{avgMinutes}m</p>
+        <p className="text-2xl font-bold text-foreground">{avgTimeFormatted}</p>
       </Card>
 
       <Card className="p-4">
         <p className="text-sm text-muted-foreground mb-2">Total Time</p>
-        <p className="text-2xl font-bold text-foreground">{totalHours}h</p>
+        <p className="text-2xl font-bold text-foreground">{totalTimeFormatted}</p>
       </Card>
 
       <Card className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">

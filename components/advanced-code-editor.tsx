@@ -14,6 +14,7 @@ interface AdvancedCodeEditorProps {
   isLoading?: boolean
   testCases?: TestCase[]
   language?: "python" | "javascript" | "java" | "cpp"
+  isValidating?: boolean
 }
 
 export function AdvancedCodeEditor({
@@ -23,6 +24,7 @@ export function AdvancedCodeEditor({
   isLoading = false,
   testCases = [],
   language = "python",
+  isValidating = false,
 }: AdvancedCodeEditorProps) {
   const [code, setCode] = useState(initialCode)
   const [charCount, setCharCount] = useState(initialCode.length)
@@ -197,12 +199,21 @@ export function AdvancedCodeEditor({
       <div className="flex gap-2">
         <Button
           onClick={handleRunCode}
-          disabled={isEvaluating || isLoading}
+          disabled={isEvaluating || isLoading || isValidating}
           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
           size="lg"
         >
-          <CheckCircle2 className="w-4 h-4 mr-2" />
-          {isEvaluating ? "Validating..." : "Validate Code"}
+          {isValidating ? (
+            <>
+              <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Validating...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Run & Test
+            </>
+          )}
         </Button>
         <Button onClick={handleResetCode} variant="outline" size="lg" title="Reset code to starter template">
           <RotateCcw className="w-4 h-4" />

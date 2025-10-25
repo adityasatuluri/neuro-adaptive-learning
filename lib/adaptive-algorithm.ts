@@ -536,6 +536,7 @@ export function updateUserProfile(
       existingProgress.attempts += 1
       existingProgress.attemptSequence.push({ correct: false, timeSpent })
       existingProgress.errorType = errorType
+      existingProgress.timestamp = Date.now()
     } else {
       updatedProfile.progressHistory.push({
         questionId: question.id,
@@ -555,6 +556,40 @@ export function updateUserProfile(
         attemptSequence: [{ correct: false, timeSpent }],
       })
     }
+
+    const topicId = question.topic
+    const topicStats = updatedProfile.topicStats.get(topicId) || {
+      topicId,
+      questionsAttempted: 0,
+      questionsCorrect: 0,
+      averageAccuracy: 0,
+      averageTimePerQuestion: 0,
+      lastAttemptDate: Date.now(),
+      masteryLevel: 0,
+      conceptBreakdown: new Map(),
+      difficultyProgression: { easy: 0, medium: 0, hard: 0 },
+      consistencyScore: 0,
+      improvementRate: 0,
+      estimatedTimeToMastery: 30 * 24 * 60 * 60 * 1000,
+      weakConcepts: [],
+      strongConcepts: [],
+    }
+
+    topicStats.questionsAttempted += 1
+    topicStats.averageAccuracy = (topicStats.questionsCorrect / topicStats.questionsAttempted) * 100
+    topicStats.averageTimePerQuestion =
+      (topicStats.averageTimePerQuestion * (topicStats.questionsAttempted - 1) + timeSpent) /
+      topicStats.questionsAttempted
+    topicStats.lastAttemptDate = Date.now()
+    topicStats.masteryLevel = Math.min(100, topicStats.averageAccuracy * 1.2)
+    topicStats.difficultyProgression[question.difficulty] += 1
+
+    updatedProfile.topicStats.set(topicId, topicStats)
+
+    updatedProfile.currentDifficulty = calculateNextDifficulty(updatedProfile)
+    updatedProfile.performanceMetrics = calculatePerformanceMetrics(updatedProfile)
+    updatedProfile.learningAnalytics = calculateLearningAnalytics(updatedProfile)
+    updatedProfile.lastAnalyticsUpdate = Date.now()
   }
 
   const lastActivityDate = updatedProfile.lastActivityDate
