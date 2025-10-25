@@ -1,0 +1,24 @@
+{
+  "title": "Add Two Numbers",
+  "description": "Write a program that reads two integers from a single line of input, separated by a space, and prints their sum. This exercise helps you practice reading input, converting strings to integers, and using the print function.",
+  "starterCode": "def main():\n # TODO: Read two integers from input\n # TODO: Compute their sum\n # TODO: Print the result\n\nif __name__ == \"__main__\": \n main()\n",
+  "solutionCode": "def main():\n a, b = map(int, input().split())\n print(a + b)\n\nif __name__ == \"__main__\": \n main()\n",
+  "expectedOutput": "8",
+  "hints": [
+    "Use input() to read a line from standard input.",
+    "Split the input string with .split() to get the two numbers as separate strings.",
+    "Convert the strings to integers using int() or map(int, ...).",
+    "Print the result with the print() function."
+  ],
+  "testCases": [
+    {
+      "input": "10 -2",
+      "expectedOutput": "8"
+    },
+    {
+      "input": "0 0",
+      "expectedOutput": "0"
+    }
+  ],
+  "tags": ["basics", "input-output", "arithmetic"]
+}

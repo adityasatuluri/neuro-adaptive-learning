@@ -215,9 +215,9 @@ export function AdvancedCodeEditor({
             </>
           )}
         </Button>
-        <Button onClick={handleResetCode} variant="outline" size="lg" title="Reset code to starter template">
+        {/* <Button onClick={handleResetCode} variant="outline" size="lg" title="Reset code to starter template">
           <RotateCcw className="w-4 h-4" />
-        </Button>
+        </Button> */}
       </div>
       {onReload && (
         <Button

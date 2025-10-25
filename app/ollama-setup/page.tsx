@@ -1,64 +1,81 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function OllamaSetupPage() {
-  const [status, setStatus] = useState<"idle" | "checking" | "success" | "error">("idle")
-  const [message, setMessage] = useState("")
-  const [models, setModels] = useState<string[]>([])
+  const [status, setStatus] = useState<
+    "idle" | "checking" | "success" | "error"
+  >("idle");
+  const [message, setMessage] = useState("");
+  const [models, setModels] = useState<string[]>([]);
 
   const checkOllamaConnection = async () => {
-    setStatus("checking")
-    setMessage("Checking Ollama connection...")
+    setStatus("checking");
+    setMessage("Checking Ollama connection...");
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_OLLAMA_BASE_URL || "http://localhost:11434"
+      const baseUrl =
+        process.env.NEXT_PUBLIC_OLLAMA_BASE_URL || "http://localhost:11434";
 
       // Check if Ollama is running
-      const versionResponse = await fetch(`${baseUrl}/api/version`)
+      const versionResponse = await fetch(`${baseUrl}/api/version`);
       if (!versionResponse.ok) {
-        throw new Error("Ollama server not responding")
+        throw new Error("Ollama server not responding");
       }
 
-      const versionData = await versionResponse.json()
-      console.log("[v0] Ollama version:", versionData)
+      const versionData = await versionResponse.json();
+      console.log(" Ollama version:", versionData);
 
       // Get available models
-      const tagsResponse = await fetch(`${baseUrl}/api/tags`)
+      const tagsResponse = await fetch(`${baseUrl}/api/tags`);
       if (!tagsResponse.ok) {
-        throw new Error("Could not fetch models")
+        throw new Error("Could not fetch models");
       }
 
-      const tagsData = await tagsResponse.json()
-      const modelNames = (tagsData.models || []).map((m: any) => m.name)
-      setModels(modelNames)
+      const tagsData = await tagsResponse.json();
+      const modelNames = (tagsData.models || []).map((m: any) => m.name);
+      setModels(modelNames);
 
       if (modelNames.length === 0) {
-        setStatus("error")
-        setMessage("Ollama is running but no models are loaded. Run: ollama pull mistral")
-        return
+        setStatus("error");
+        setMessage(
+          "Ollama is running but no models are loaded. Run: ollama pull mistral"
+        );
+        return;
       }
 
-      setStatus("success")
-      setMessage(`Ollama is running! Found ${modelNames.length} model(s).`)
+      setStatus("success");
+      setMessage(`Ollama is running! Found ${modelNames.length} model(s).`);
     } catch (error) {
-      setStatus("error")
+      setStatus("error");
       setMessage(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}. Make sure Ollama is running on http://localhost:11434`,
-      )
+        `Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }. Make sure Ollama is running on http://localhost:11434`
+      );
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
       <div className="max-w-2xl mx-auto">
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
-            <CardTitle className="text-white">Ollama Setup & Diagnostics</CardTitle>
-            <CardDescription>Check your Ollama connection and model availability</CardDescription>
+            <CardTitle className="text-white">
+              Ollama Setup & Diagnostics
+            </CardTitle>
+            <CardDescription>
+              Check your Ollama connection and model availability
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
@@ -71,13 +88,29 @@ export default function OllamaSetupPage() {
               </ol>
             </div>
 
-            <Button onClick={checkOllamaConnection} disabled={status === "checking"} className="w-full">
-              {status === "checking" ? "Checking..." : "Check Ollama Connection"}
+            <Button
+              onClick={checkOllamaConnection}
+              disabled={status === "checking"}
+              className="w-full"
+            >
+              {status === "checking"
+                ? "Checking..."
+                : "Check Ollama Connection"}
             </Button>
 
             {message && (
-              <Alert className={status === "success" ? "bg-green-900 border-green-700" : "bg-red-900 border-red-700"}>
-                <AlertDescription className={status === "success" ? "text-green-200" : "text-red-200"}>
+              <Alert
+                className={
+                  status === "success"
+                    ? "bg-green-900 border-green-700"
+                    : "bg-red-900 border-red-700"
+                }
+              >
+                <AlertDescription
+                  className={
+                    status === "success" ? "text-green-200" : "text-red-200"
+                  }
+                >
                   {message}
                 </AlertDescription>
               </Alert>
@@ -88,7 +121,10 @@ export default function OllamaSetupPage() {
                 <h3 className="font-semibold text-white">Available Models:</h3>
                 <div className="space-y-1">
                   {models.map((model) => (
-                    <div key={model} className="text-sm text-slate-300 bg-slate-700 p-2 rounded">
+                    <div
+                      key={model}
+                      className="text-sm text-slate-300 bg-slate-700 p-2 rounded"
+                    >
                       {model}
                     </div>
                   ))}
@@ -97,11 +133,14 @@ export default function OllamaSetupPage() {
             )}
 
             <div className="bg-slate-700 p-4 rounded space-y-2">
-              <h3 className="font-semibold text-white text-sm">Environment Variables:</h3>
+              <h3 className="font-semibold text-white text-sm">
+                Environment Variables:
+              </h3>
               <div className="text-xs text-slate-300 space-y-1">
                 <div>
                   <span className="text-slate-400">OLLAMA_BASE_URL:</span>{" "}
-                  {process.env.NEXT_PUBLIC_OLLAMA_BASE_URL || "http://localhost:11434"}
+                  {process.env.NEXT_PUBLIC_OLLAMA_BASE_URL ||
+                    "http://localhost:11434"}
                 </div>
                 <div>
                   <span className="text-slate-400">OLLAMA_MODEL:</span>{" "}
@@ -113,5 +152,5 @@ export default function OllamaSetupPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

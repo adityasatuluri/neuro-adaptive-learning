@@ -9,6 +9,7 @@ This guide provides comprehensive instructions on how to conduct unit tests, int
 ### Core Components
 
 1. **test-framework.ts** - Base testing utilities
+
    - `runTest()` - Execute individual tests with timing
    - `runTestSuite()` - Execute multiple tests and generate reports
    - `assert` - Assertion library with multiple validators
@@ -33,53 +34,61 @@ This guide provides comprehensive instructions on how to conduct unit tests, int
 **A. Performance Metrics Calculation**
 \`\`\`typescript
 // Test: Calculate performance metrics for empty profile
+
 - Verify accuracy = 0 for new users
 - Verify speed = 0 for new users
 - Verify consistency = 0 for new users
 - Verify learningVelocity = 0 for new users
-\`\`\`
+  \`\`\`
 
 **B. User Profile Updates**
 \`\`\`typescript
 // Test: Update profile with correct answer
+
 - Increment correctAnswers by 1
 - Increment totalQuestionsAttempted by 1
 - Update progressHistory with new entry
 - Recalculate performance metrics
 
 // Test: Update profile with incorrect answer
+
 - Keep correctAnswers unchanged
 - Increment totalQuestionsAttempted by 1
 - Update progressHistory with failure entry
 - Adjust difficulty if needed
-\`\`\`
+  \`\`\`
 
 **C. Streak Calculations**
 \`\`\`typescript
 // Test: Winning streak multiplier
+
 - 5 consecutive correct answers → multiplier > 1
 - Verify multiplier increases with streak length
 - Test streak reset on incorrect answer
 
 // Test: Losing streak multiplier
+
 - 3 consecutive incorrect answers → multiplier < 1
 - Verify multiplier decreases with streak length
-\`\`\`
+  \`\`\`
 
 **D. Difficulty Progression**
 \`\`\`typescript
 // Test: Easy to Medium progression
+
 - Accuracy ≥ 80% → suggest medium difficulty
 - Verify after 10 correct answers
 
 // Test: Maintain difficulty
+
 - Inconsistent performance (50% accuracy) → stay at current level
 - Verify after 10 mixed attempts
 
 // Test: Regression to easier difficulty
+
 - Accuracy < 60% → suggest easier difficulty
 - Verify after 10 incorrect answers
-\`\`\`
+  \`\`\`
 
 #### Running Algorithm Tests
 
@@ -99,25 +108,29 @@ console.log(`Passed: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Save user profile to localStorage
+
 - Verify profile is stored
 - Verify data can be retrieved
 - Verify data integrity after retrieval
 
 // Test: Update existing profile
+
 - Modify profile data
 - Save to localStorage
 - Verify changes persisted
 
 // Test: Clear user data
+
 - Save profile
 - Clear data
 - Verify localStorage is empty
 
 // Test: Handle corrupted data
+
 - Store invalid JSON
 - Attempt to retrieve
 - Verify graceful error handling
-\`\`\`
+  \`\`\`
 
 ### 1.3 Question Selection Logic Tests
 
@@ -127,24 +140,28 @@ console.log(`Passed: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Select question by difficulty
+
 - Easy profile → select easy questions
 - Medium profile → select medium questions
 - Hard profile → select hard questions
 
 // Test: Select question by weak areas
+
 - Profile has weak areas → prioritize weak area questions
 - Verify weak area questions appear first
 
 // Test: Avoid repeated questions
+
 - Select question
 - Verify same question not selected immediately
 - Verify question pool rotation
 
 // Test: Balance between weak and strong areas
+
 - 70% weak area questions
 - 30% strong area questions
 - Verify ratio maintained
-\`\`\`
+  \`\`\`
 
 ### 1.4 Reinforcement Learning Tests
 
@@ -154,24 +171,28 @@ console.log(`Passed: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Q-value initialization
+
 - New state → Q-value = 0
 - Verify all actions initialized
 
 // Test: Q-value updates
+
 - Correct answer → Q-value increases
 - Incorrect answer → Q-value decreases
-- Verify update formula: Q = Q + α(r + γ*maxQ' - Q)
+- Verify update formula: Q = Q + α(r + γ\*maxQ' - Q)
 
 // Test: Exploration vs Exploitation
+
 - ε-greedy strategy with ε=0.1
 - 90% exploitation, 10% exploration
 - Verify action selection distribution
 
 // Test: Reward calculation
+
 - Correct + fast → high reward
 - Correct + slow → medium reward
 - Incorrect → negative reward
-\`\`\`
+  \`\`\`
 
 ---
 
@@ -185,30 +206,35 @@ console.log(`Passed: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Step 1: Generate personalized learning path
+
 - Input: User profile with weak areas
 - Output: Valid learning path
 - Verify: Path focuses on weak areas
 
 // Step 2: Generate question from path
+
 - Input: Learning path
 - Output: Question matching path difficulty
 - Verify: Question topic in path
 
 // Step 3: User submits answer
+
 - Input: User code, test cases
 - Output: Validation result
 - Verify: Correct/incorrect determination
 
 // Step 4: Update user profile
+
 - Input: Validation result, time spent
 - Output: Updated profile
 - Verify: Metrics recalculated
 
 // Step 5: Update learning path
+
 - Input: Updated profile
 - Output: Adjusted learning path
 - Verify: Path reflects new performance
-\`\`\`
+  \`\`\`
 
 #### Running Integration Tests
 
@@ -227,25 +253,29 @@ console.log(`Integration tests: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Generate easy question
+
 - Verify difficulty = "easy"
 - Verify question has all required fields
 - Verify test cases are valid
 
 // Test: Generate medium question
+
 - Verify difficulty = "medium"
 - Verify complexity > easy questions
 - Verify hints provided
 
 // Test: Generate hard question
+
 - Verify difficulty = "hard"
 - Verify advanced concepts
 - Verify multiple test cases
 
 // Test: Generate batch of questions
+
 - Generate 10 questions
 - Verify all are valid
 - Verify variety in topics
-\`\`\`
+  \`\`\`
 
 ### 2.3 Code Validation Workflow
 
@@ -255,25 +285,29 @@ console.log(`Integration tests: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Validate correct code
+
 - Input: Correct solution
 - Output: { isCorrect: true, score: 100 }
 - Verify: All test cases pass
 
 // Test: Validate incorrect code
+
 - Input: Wrong solution
 - Output: { isCorrect: false, score: < 100 }
 - Verify: Specific test case failures identified
 
 // Test: Validate partial solution
+
 - Input: Partially correct code
 - Output: { isCorrect: false, score: 50-99 }
 - Verify: Feedback on failing test cases
 
 // Test: Code review feedback
+
 - Input: Correct but inefficient code
 - Output: Feedback on optimization
 - Verify: Suggestions provided
-\`\`\`
+  \`\`\`
 
 ### 2.4 Analytics Calculation
 
@@ -283,21 +317,25 @@ console.log(`Integration tests: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Calculate accuracy
+
 - 8 correct out of 10 attempts → 80% accuracy
-- Verify formula: (correctAnswers / totalAttempts) * 100
+- Verify formula: (correctAnswers / totalAttempts) \* 100
 
 // Test: Calculate speed
+
 - Average time per question
 - Verify: Faster = higher speed score
 
 // Test: Calculate consistency
+
 - Variance in performance
 - Verify: Low variance = high consistency
 
 // Test: Calculate learning velocity
+
 - Rate of improvement over time
 - Verify: Positive trend = positive velocity
-\`\`\`
+  \`\`\`
 
 ---
 
@@ -311,20 +349,23 @@ console.log(`Integration tests: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Load 100 questions
+
 - Target: < 5 seconds
 - Measure: Time to load and parse
 - Verify: No memory leaks
 
 // Test: Load 1000 questions
+
 - Target: < 30 seconds
 - Measure: Memory usage
 - Verify: Graceful degradation
 
 // Test: Search questions by topic
+
 - Target: < 500ms for 1000 questions
 - Measure: Search algorithm efficiency
 - Verify: Correct results returned
-\`\`\`
+  \`\`\`
 
 ### 3.2 Metric Calculation Efficiency
 
@@ -334,20 +375,23 @@ console.log(`Integration tests: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Calculate metrics for profile with 100 attempts
+
 - Target: < 100ms
 - Measure: Calculation time
 - Verify: Accurate results
 
 // Test: Calculate metrics for profile with 1000 attempts
+
 - Target: < 1000ms
 - Measure: Scaling behavior
 - Verify: O(n) or better complexity
 
 // Test: Update profile with new attempt
+
 - Target: < 50ms
 - Measure: Update time
 - Verify: Real-time responsiveness
-\`\`\`
+  \`\`\`
 
 ### 3.3 RL Update Performance
 
@@ -357,20 +401,23 @@ console.log(`Integration tests: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Update Q-values for 100 state-action pairs
+
 - Target: < 100ms
 - Measure: Update time
 - Verify: No blocking operations
 
 // Test: Select action from 1000 possible actions
+
 - Target: < 50ms
 - Measure: Selection time
 - Verify: ε-greedy efficiency
 
 // Test: Batch update 100 Q-values
+
 - Target: < 200ms
 - Measure: Batch operation time
 - Verify: Vectorized operations
-\`\`\`
+  \`\`\`
 
 ### 3.4 UI Responsiveness
 
@@ -380,20 +427,23 @@ console.log(`Integration tests: ${results.passedTests}/${results.totalTests}`)
 
 \`\`\`typescript
 // Test: Render code editor with 1000 lines
+
 - Target: < 500ms
 - Measure: Render time
 - Verify: Smooth scrolling
 
 // Test: Syntax highlighting for large code
+
 - Target: < 200ms
 - Measure: Highlighting time
 - Verify: No UI freezing
 
 // Test: Update progress stats
+
 - Target: < 100ms
 - Measure: Update time
 - Verify: Smooth animation
-\`\`\`
+  \`\`\`
 
 ---
 
@@ -413,16 +463,16 @@ import { runPerformanceTests } from "@/lib/performance-tests"
 import { runAIGenerationTests } from "@/lib/ai-tests"
 
 export default function TestRunner() {
-  const [results, setResults] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
+const [results, setResults] = useState<any>(null)
+const [loading, setLoading] = useState(false)
 
-  const runAllTests = async () => {
-    setLoading(true)
-    try {
-      const algorithmResults = await runAlgorithmTests()
-      const integrationResults = await runIntegrationTests()
-      const performanceResults = await runPerformanceTests()
-      const aiResults = await runAIGenerationTests()
+const runAllTests = async () => {
+setLoading(true)
+try {
+const algorithmResults = await runAlgorithmTests()
+const integrationResults = await runIntegrationTests()
+const performanceResults = await runPerformanceTests()
+const aiResults = await runAIGenerationTests()
 
       setResults({
         algorithm: algorithmResults,
@@ -435,18 +485,19 @@ export default function TestRunner() {
     } finally {
       setLoading(false)
     }
-  }
 
-  return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold mb-4">RLAIEVAL Test Runner</h1>
-      <button
+}
+
+return (
+<div className="p-8">
+<h1 className="text-3xl font-bold mb-4">RLAIEVAL Test Runner</h1>
+<button
         onClick={runAllTests}
         disabled={loading}
         className="px-4 py-2 bg-blue-500 text-white rounded"
       >
-        {loading ? "Running Tests..." : "Run All Tests"}
-      </button>
+{loading ? "Running Tests..." : "Run All Tests"}
+</button>
 
       {results && (
         <div className="mt-8 space-y-4">
@@ -460,7 +511,8 @@ export default function TestRunner() {
         </div>
       )}
     </div>
-  )
+
+)
 }
 \`\`\`
 
@@ -470,12 +522,12 @@ Add to `package.json`:
 
 \`\`\`json
 {
-  "scripts": {
-    "test": "node scripts/run-tests.js",
-    "test:unit": "node scripts/run-unit-tests.js",
-    "test:integration": "node scripts/run-integration-tests.js",
-    "test:performance": "node scripts/run-performance-tests.js"
-  }
+"scripts": {
+"test": "node scripts/run-tests.js",
+"test:unit": "node scripts/run-unit-tests.js",
+"test:integration": "node scripts/run-integration-tests.js",
+"test:performance": "node scripts/run-performance-tests.js"
+}
 }
 \`\`\`
 
@@ -490,8 +542,8 @@ import { TestDataGenerator } from "@/lib/test-data-generator"
 
 // Generate single mock question
 const question = TestDataGenerator.generateMockQuestion({
-  difficulty: "medium",
-  topic: "loops"
+difficulty: "medium",
+topic: "loops"
 })
 
 // Generate mock profile
@@ -531,10 +583,10 @@ assert.inRange(metrics3.accuracy, 20, 40)
 ### 6.1 Enable Debug Logging
 
 \`\`\`typescript
-// In test files, use console.log with [v0] prefix
-console.log("[v0] Profile accuracy:", profile.performanceMetrics.accuracy)
-console.log("[v0] Selected question:", question.id)
-console.log("[v0] Q-value update:", { oldQ, newQ, reward })
+// In test files, use console.log with prefix
+console.log(" Profile accuracy:", profile.performanceMetrics.accuracy)
+console.log(" Selected question:", question.id)
+console.log(" Q-value update:", { oldQ, newQ, reward })
 \`\`\`
 
 ### 6.2 Inspect Test Results
@@ -543,9 +595,9 @@ console.log("[v0] Q-value update:", { oldQ, newQ, reward })
 // Print detailed test results
 const suite = await runAlgorithmTests()
 suite.tests.forEach(test => {
-  console.log(`[v0] ${test.testName}: ${test.passed ? "✓" : "✗"}`)
-  if (test.error) console.log(`[v0] Error: ${test.error}`)
-  if (test.details) console.log(`[v0] Details:`, test.details)
+console.log(` ${test.testName}: ${test.passed ? "✓" : "✗"}`)
+if (test.error) console.log(` Error: ${test.error}`)
+if (test.details) console.log(` Details:`, test.details)
 })
 \`\`\`
 
@@ -559,7 +611,7 @@ suite.tests.forEach(test => {
 const startTime = performance.now()
 // ... operation ...
 const duration = performance.now() - startTime
-console.log(`[v0] Operation took ${duration.toFixed(2)}ms`)
+console.log(` Operation took ${duration.toFixed(2)}ms`)
 \`\`\`
 
 ### 7.2 Memory Profiling
@@ -567,8 +619,8 @@ console.log(`[v0] Operation took ${duration.toFixed(2)}ms`)
 \`\`\`typescript
 // Check memory usage (Node.js)
 if (typeof process !== 'undefined') {
-  const memUsage = process.memoryUsage()
-  console.log(`[v0] Memory: ${(memUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`)
+const memUsage = process.memoryUsage()
+console.log(` Memory: ${(memUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`)
 }
 \`\`\`
 
@@ -576,28 +628,32 @@ if (typeof process !== 'undefined') {
 
 ## 8. Test Coverage Goals
 
-| Category | Target Coverage | Current |
-|----------|-----------------|---------|
-| Algorithm | 95% | - |
-| Integration | 85% | - |
-| Performance | 80% | - |
-| AI Generation | 90% | - |
-| **Overall** | **90%** | - |
+| Category      | Target Coverage | Current |
+| ------------- | --------------- | ------- |
+| Algorithm     | 95%             | -       |
+| Integration   | 85%             | -       |
+| Performance   | 80%             | -       |
+| AI Generation | 90%             | -       |
+| **Overall**   | **90%**         | -       |
 
 ---
 
 ## 9. Troubleshooting
 
 ### Issue: Tests timeout
+
 **Solution:** Increase timeout in test runner, check for blocking operations
 
 ### Issue: Flaky tests
+
 **Solution:** Use fixed random seeds, avoid time-dependent assertions
 
 ### Issue: Memory leaks
+
 **Solution:** Clear test data after each test, use `beforeEach`/`afterEach` hooks
 
 ### Issue: AI generation tests fail
+
 **Solution:** Verify Ollama is running, check model availability
 
 ---
@@ -623,6 +679,6 @@ if (typeof process !== 'undefined') {
 - Expand test coverage for new features
 - Review test results in CI/CD pipeline
 - Document test failures and resolutions
-\`\`\`
+  \`\`\`
 
 Now let me create an additional file with specific test examples for code validation and RL updates:

@@ -92,7 +92,7 @@ Respond ONLY with valid JSON in this exact format:
     );
 
     if (!response.ok) {
-      console.error("[v0] Groq API error:", response.statusText);
+      console.error(" Groq API error:", response.statusText);
       return null;
     }
 
@@ -102,15 +102,14 @@ Respond ONLY with valid JSON in this exact format:
     // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error("[v0] Could not parse JSON from response");
+      console.error(" Could not parse JSON from response");
       return null;
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
-    console.log(parsed);
     return questionSchema.parse(parsed);
   } catch (error) {
-    console.error("[v0] Error generating question:", error);
+    console.error(" Error generating question:", error);
     return null;
   }
 }
