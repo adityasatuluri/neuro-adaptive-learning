@@ -4,6 +4,7 @@ import type { UserProfile } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { formatDuration, formatAverageTime } from "@/lib/time-formatter"
+import { calculateAdaptiveMaxProblems } from "@/lib/adaptive-algorithm"
 
 interface ProgressStatsProps {
   profile: UserProfile
@@ -16,7 +17,6 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
   const avgTimeFormatted = formatAverageTime(profile.averageTimePerQuestion)
   const totalTimeFormatted = formatDuration(profile.totalTimeSpent)
 
-  // Calculate progress to next difficulty level based on accuracy and attempts
   const getProgressToNextDifficulty = () => {
     const recentAttempts = profile.progressHistory.slice(-20)
 
@@ -28,8 +28,9 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
     const accuracy = (correctCount / recentAttempts.length) * 100
 
     if (profile.currentDifficulty === "easy") {
-      // Need 80%+ accuracy on 10 easy questions to progress to medium
-      const questionsNeeded = 10
+      // Adaptive: base on calculated max problems
+      const adaptiveMax = calculateAdaptiveMaxProblems(profile)
+      const questionsNeeded = adaptiveMax
       const questionsCompleted = Math.min(recentAttempts.length, questionsNeeded)
       const accuracyProgress = accuracy >= 80 ? 100 : (accuracy / 80) * 50
       const volumeProgress = (questionsCompleted / questionsNeeded) * 50
@@ -42,8 +43,9 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
         nextLevel: "medium",
       }
     } else if (profile.currentDifficulty === "medium") {
-      // Need 75%+ accuracy on 15 medium questions to progress to hard
-      const questionsNeeded = 15
+      // Adaptive: base on calculated max problems
+      const adaptiveMax = calculateAdaptiveMaxProblems(profile)
+      const questionsNeeded = adaptiveMax
       const questionsCompleted = Math.min(recentAttempts.length, questionsNeeded)
       const accuracyProgress = accuracy >= 75 ? 100 : (accuracy / 75) * 50
       const volumeProgress = (questionsCompleted / questionsNeeded) * 50
@@ -57,7 +59,8 @@ export function ProgressStats({ profile }: ProgressStatsProps) {
       }
     } else {
       // Hard level - show mastery progress
-      const questionsNeeded = 20
+      const adaptiveMax = calculateAdaptiveMaxProblems(profile)
+      const questionsNeeded = adaptiveMax
       const questionsCompleted = Math.min(recentAttempts.length, questionsNeeded)
       const accuracyProgress = accuracy >= 85 ? 100 : (accuracy / 85) * 100
       const progress = Math.min(100, accuracyProgress)

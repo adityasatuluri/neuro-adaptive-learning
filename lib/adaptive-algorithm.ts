@@ -446,6 +446,7 @@ export function updateUserProfile(
   confidence = 50,
   errorType?: string,
   conceptsInvolved: string[] = [],
+  solutionViewed = false,
 ): UserProfile {
   const updatedProfile = { ...profile }
 
@@ -461,6 +462,10 @@ export function updateUserProfile(
       existingProgress.reviewCount += 1
       existingProgress.confidence = confidence
       existingProgress.conceptsInvolved = conceptsInvolved
+      existingProgress.solutionViewed = solutionViewed
+      if (solutionViewed) {
+        existingProgress.solutionViewedAt = Date.now()
+      }
       const metrics = calculatePerformanceMetrics(updatedProfile)
       existingProgress.nextReviewDate = calculateNextReviewDate(existingProgress.reviewCount, metrics)
     } else {
@@ -480,6 +485,8 @@ export function updateUserProfile(
         conceptsInvolved,
         timeToFirstAttempt: timeSpent,
         attemptSequence: [{ correct: isCorrect, timeSpent }],
+        solutionViewed,
+        solutionViewedAt: solutionViewed ? Date.now() : undefined,
       })
     }
 
@@ -537,6 +544,10 @@ export function updateUserProfile(
       existingProgress.attemptSequence.push({ correct: false, timeSpent })
       existingProgress.errorType = errorType
       existingProgress.timestamp = Date.now()
+      existingProgress.solutionViewed = solutionViewed
+      if (solutionViewed) {
+        existingProgress.solutionViewedAt = Date.now()
+      }
     } else {
       updatedProfile.progressHistory.push({
         questionId: question.id,
@@ -554,6 +565,8 @@ export function updateUserProfile(
         errorType,
         timeToFirstAttempt: timeSpent,
         attemptSequence: [{ correct: false, timeSpent }],
+        solutionViewed,
+        solutionViewedAt: solutionViewed ? Date.now() : undefined,
       })
     }
 
@@ -672,4 +685,33 @@ export function getRecommendedNextTopic(profile: UserProfile, availableTopics: s
     const currentMastery = getTopicMastery(profile, current)
     return currentMastery < prevMastery ? current : prev
   })
+}
+
+export function calculateAdaptiveMaxProblems(profile: UserProfile): number {
+  const recentAttempts = profile.progressHistory.slice(-20)
+
+  if (recentAttempts.length === 0) {
+    return profile.currentDifficulty === "easy" ? 10 : profile.currentDifficulty === "medium" ? 15 : 20
+  }
+
+  const correctCount = recentAttempts.filter((p) => p.correct).length
+  const accuracy = (correctCount / recentAttempts.length) * 100
+
+  // Base max problems per difficulty
+  const baseMax = profile.currentDifficulty === "easy" ? 10 : profile.currentDifficulty === "medium" ? 15 : 20
+
+  // Adaptive adjustment based on accuracy
+  if (accuracy >= 85) {
+    // High accuracy: increase max problems to challenge more
+    return Math.ceil(baseMax * 1.3)
+  } else if (accuracy >= 70) {
+    // Good accuracy: maintain or slightly increase
+    return Math.ceil(baseMax * 1.1)
+  } else if (accuracy >= 50) {
+    // Average accuracy: maintain
+    return baseMax
+  } else {
+    // Low accuracy: decrease to focus on fundamentals
+    return Math.ceil(baseMax * 0.7)
+  }
 }

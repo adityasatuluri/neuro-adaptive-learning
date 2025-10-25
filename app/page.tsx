@@ -18,12 +18,18 @@ import {
   loadCSVDataset,
   resetUserProgress,
 } from "@/lib/storage"
-import { updateUserProfile, selectNextQuestion, selectRandomQuestionSameDifficulty } from "@/lib/adaptive-algorithm"
+import {
+  updateUserProfile,
+  selectNextQuestion,
+  selectRandomQuestionSameDifficulty,
+  calculateAdaptiveMaxProblems,
+} from "@/lib/adaptive-algorithm"
 import { generateQuestionByDifficulty } from "@/app/actions/generate-question"
 import type { Question, UserProfile } from "@/lib/types"
 import { AICodeReview } from "@/components/ai-code-review"
 import { validateCodeWithAI } from "@/lib/ai-code-reviewer"
 import type { CodeValidationResult } from "@/lib/ai-code-reviewer"
+import { Pause, Play } from "lucide-react"
 
 export default function Home() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -32,9 +38,15 @@ export default function Home() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [startTime, setStartTime] = useState<number>(0)
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("grok-oss:120b-cloud")
+  const [selectedModel, setSelectedModel] = useState("gpt-oss:120b-cloud")
   const [codeValidation, setCodeValidation] = useState<CodeValidationResult | null>(null)
   const [isValidatingCode, setIsValidatingCode] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [pausedTime, setPausedTime] = useState<number>(0)
+  const [totalPausedDuration, setTotalPausedDuration] = useState<number>(0)
+  const [questionsInSession, setQuestionsInSession] = useState(0)
+  const [maxProblemsPerSession, setMaxProblemsPerSession] = useState(10)
+  const [solutionViewed, setSolutionViewed] = useState(false)
 
   useEffect(() => {
     const userProfile = getUserProfile()
@@ -46,8 +58,50 @@ export default function Home() {
       console.error("[v0] Error loading CSV dataset:", error)
     })
 
-    loadNextQuestion(userProfile)
+    generateInitialQuestion(userProfile)
+    const adaptiveMax = calculateAdaptiveMaxProblems(userProfile)
+    setMaxProblemsPerSession(adaptiveMax)
   }, [])
+
+  const generateInitialQuestion = async (userProfile: UserProfile) => {
+    setIsGeneratingQuestion(true)
+    try {
+      console.log("[v0] Generating initial AI question on app start...")
+      const currentPath = getCurrentLearningPath()
+      const topic = currentPath.topics[0]
+
+      const generatedQuestion = await generateQuestionByDifficulty(userProfile.currentDifficulty, topic, selectedModel)
+
+      if (generatedQuestion) {
+        const aiQuestion = {
+          ...generatedQuestion,
+          id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          difficulty: userProfile.currentDifficulty,
+          topic: topic,
+          subtopic: "ai-generated",
+          type: "code-writing" as const,
+          prerequisites: [],
+          estimatedTime: 600,
+        }
+
+        cacheAIQuestion(aiQuestion)
+        clearOldAIQuestionCache()
+
+        setCurrentQuestion(aiQuestion)
+        setStartTime(Date.now())
+        setSolutionViewed(false)
+        console.log("[v0] Initial AI question generated successfully")
+      } else {
+        console.warn("[v0] Failed to generate initial question, falling back to templates")
+        loadNextQuestion(userProfile)
+      }
+    } catch (error) {
+      console.error("[v0] Error generating initial question:", error)
+      loadNextQuestion(userProfile)
+    } finally {
+      setIsGeneratingQuestion(false)
+    }
+  }
 
   const loadNextQuestion = (userProfile: UserProfile) => {
     const currentPath = getCurrentLearningPath()
@@ -68,6 +122,49 @@ export default function Home() {
 
     setStartTime(Date.now())
     setFeedback(null)
+    setIsPaused(false)
+    setPausedTime(0)
+    setSolutionViewed(false)
+  }
+
+  const generateNextAIQuestion = async (userProfile: UserProfile) => {
+    setIsGeneratingQuestion(true)
+    try {
+      console.log("[v0] Generating next AI question after successful validation...")
+      const currentPath = getCurrentLearningPath()
+      const topic = currentPath.topics[0]
+
+      const generatedQuestion = await generateQuestionByDifficulty(userProfile.currentDifficulty, topic, selectedModel)
+
+      if (generatedQuestion) {
+        const aiQuestion = {
+          ...generatedQuestion,
+          id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          difficulty: userProfile.currentDifficulty,
+          topic: topic,
+          subtopic: "ai-generated",
+          type: "code-writing" as const,
+          prerequisites: [],
+          estimatedTime: 600,
+        }
+
+        cacheAIQuestion(aiQuestion)
+        clearOldAIQuestionCache()
+
+        setCurrentQuestion(aiQuestion)
+        setStartTime(Date.now())
+        setSolutionViewed(false)
+        console.log("[v0] Next AI question generated successfully")
+      } else {
+        console.warn("[v0] Failed to generate next question, falling back to templates")
+        loadNextQuestion(userProfile)
+      }
+    } catch (error) {
+      console.error("[v0] Error generating next question:", error)
+      loadNextQuestion(userProfile)
+    } finally {
+      setIsGeneratingQuestion(false)
+    }
   }
 
   const handleReloadQuestion = () => {
@@ -82,7 +179,29 @@ export default function Home() {
       setCurrentQuestion(newQuestion)
       setStartTime(Date.now())
       setFeedback(null)
+      setIsPaused(false)
+      setPausedTime(0)
+      setSolutionViewed(false)
     }
+  }
+
+  const handlePauseResume = () => {
+    if (isPaused) {
+      // Resume: add paused duration to total
+      const pauseDuration = Date.now() - pausedTime
+      setTotalPausedDuration(totalPausedDuration + pauseDuration)
+      setIsPaused(false)
+      setPausedTime(0)
+    } else {
+      // Pause: record pause start time
+      setIsPaused(true)
+      setPausedTime(Date.now())
+    }
+  }
+
+  const handleSolutionView = () => {
+    setSolutionViewed(true)
+    console.log("[v0] Solution viewed - will impact progress")
   }
 
   const handleSubmitCode = async (code: string) => {
@@ -103,22 +222,49 @@ export default function Home() {
         console.log("[v0] Validation result:", validation.passed)
 
         if (validation.passed) {
-          const timeSpent = Math.round((Date.now() - startTime) / 1000)
-          const updatedProfile = updateUserProfile(profile, currentQuestion, true, timeSpent, code)
+          const totalTime = Date.now() - startTime
+          const timeSpent = Math.round((totalTime - totalPausedDuration) / 1000)
+          const updatedProfile = updateUserProfile(
+            profile,
+            currentQuestion,
+            true,
+            timeSpent,
+            code,
+            50,
+            undefined,
+            [],
+            solutionViewed,
+          )
           setProfile(updatedProfile)
           saveUserProfile(updatedProfile)
 
+          const adaptiveMax = calculateAdaptiveMaxProblems(updatedProfile)
+          setMaxProblemsPerSession(adaptiveMax)
+          setQuestionsInSession(questionsInSession + 1)
+
           setFeedback({
             type: "success",
-            message: `Correct! Time: ${timeSpent}s. Difficulty: ${updatedProfile.currentDifficulty}`,
+            message: `Correct! Time: ${timeSpent}s. Difficulty: ${updatedProfile.currentDifficulty}${solutionViewed ? " (Solution viewed - progress reduced)" : ""}`,
           })
 
           setTimeout(() => {
-            loadNextQuestion(updatedProfile)
+            generateNextAIQuestion(updatedProfile)
+            setTotalPausedDuration(0)
           }, 2000)
         } else {
-          const timeSpent = Math.round((Date.now() - startTime) / 1000)
-          const updatedProfile = updateUserProfile(profile, currentQuestion, false, timeSpent, code)
+          const totalTime = Date.now() - startTime
+          const timeSpent = Math.round((totalTime - totalPausedDuration) / 1000)
+          const updatedProfile = updateUserProfile(
+            profile,
+            currentQuestion,
+            false,
+            timeSpent,
+            code,
+            50,
+            undefined,
+            [],
+            solutionViewed,
+          )
           setProfile(updatedProfile)
           saveUserProfile(updatedProfile)
 
@@ -171,6 +317,7 @@ export default function Home() {
 
         setCurrentQuestion(aiQuestion)
         setStartTime(Date.now())
+        setSolutionViewed(false)
         setFeedback({
           type: "success",
           message: "Question generated successfully!",
@@ -217,6 +364,11 @@ export default function Home() {
             <h1 className="text-4xl font-bold text-foreground mb-2">Neuro Adaptive System</h1>
             <p className="text-muted-foreground">Master Python through adaptive coding challenges</p>
           </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">
+              Questions: {questionsInSession}/{maxProblemsPerSession}
+            </p>
+          </div>
         </div>
 
         {/* Progress Stats */}
@@ -224,11 +376,32 @@ export default function Home() {
           <ProgressStats profile={profile} />
         </div>
 
+        {isPaused && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 rounded-lg">
+            <Card className="p-8 text-center max-w-md">
+              <h2 className="text-3xl font-bold text-foreground mb-4">Take a Break</h2>
+              <p className="text-muted-foreground mb-6">
+                You've paused your coding session. Take a moment to rest and come back when you're ready!
+              </p>
+              <Button
+                onClick={handlePauseResume}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                size="lg"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Resume Coding
+              </Button>
+            </Card>
+          </div>
+        )}
+
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div
+          className={`grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 ${isPaused ? "opacity-50 pointer-events-none" : ""}`}
+        >
           {/* Question Section */}
           <div className="lg:col-span-2">
-            <QuestionDisplay question={currentQuestion} />
+            <QuestionDisplay question={currentQuestion} onSolutionView={handleSolutionView} />
             <div className="mt-6">
               <AdvancedCodeEditor
                 initialCode={currentQuestion.starterCode}
@@ -289,6 +462,28 @@ export default function Home() {
                 </div>
               </div>
             </Card>
+
+            <Button
+              onClick={handlePauseResume}
+              className={`w-full ${
+                isPaused
+                  ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                  : "bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800"
+              }`}
+              size="lg"
+            >
+              {isPaused ? (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Resume
+                </>
+              ) : (
+                <>
+                  <Pause className="w-4 h-4 mr-2" />
+                  Take a Break
+                </>
+              )}
+            </Button>
 
             <Button
               onClick={handleGenerateQuestion}

@@ -1,14 +1,20 @@
 "use client"
 
+import { useState } from "react"
 import type { Question } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Eye } from "lucide-react"
 
 interface QuestionDisplayProps {
   question: Question
+  onSolutionView?: () => void
 }
 
-export function QuestionDisplay({ question }: QuestionDisplayProps) {
+export function QuestionDisplay({ question, onSolutionView }: QuestionDisplayProps) {
+  const [showSolution, setShowSolution] = useState(false)
+
   const difficultyColors = {
     easy: "bg-green-100 text-green-800",
     medium: "bg-yellow-100 text-yellow-800",
@@ -20,6 +26,11 @@ export function QuestionDisplay({ question }: QuestionDisplayProps) {
     "code-completion": "Complete Code",
     debugging: "Debug Code",
     "output-prediction": "Predict Output",
+  }
+
+  const handleViewSolution = () => {
+    setShowSolution(true)
+    onSolutionView?.()
   }
 
   return (
@@ -70,6 +81,18 @@ export function QuestionDisplay({ question }: QuestionDisplayProps) {
           </ul>
         </div>
 
+        {showSolution && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <h3 className="font-semibold text-blue-900 mb-2">Solution</h3>
+            <pre className="bg-white p-3 rounded border border-blue-100 overflow-x-auto text-sm font-mono text-foreground">
+              {question.starterCode}
+            </pre>
+            <p className="text-xs text-blue-700 mt-2">
+              ⚠️ Viewing the solution will negatively impact your progress score for this question.
+            </p>
+          </div>
+        )}
+
         <div className="flex gap-4 pt-2 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground">Estimated Time</p>
@@ -88,6 +111,17 @@ export function QuestionDisplay({ question }: QuestionDisplayProps) {
             </div>
           )}
         </div>
+
+        {!showSolution && (
+          <Button
+            onClick={handleViewSolution}
+            variant="outline"
+            className="w-full mt-4 text-amber-600 border-amber-200 hover:bg-amber-50 bg-transparent"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            View Solution
+          </Button>
+        )}
       </div>
     </Card>
   )

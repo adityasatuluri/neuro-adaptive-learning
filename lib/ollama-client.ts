@@ -4,9 +4,9 @@
 import { z } from "zod"
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434"
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "grok-oss:120b-cloud"
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gpt-oss:120b-cloud"
 
-const DEFAULT_MODELS = ["grok-oss:120b-cloud", "mistral", "neural-chat", "llama2", "codellama", "dolphin-mixtral"]
+const DEFAULT_MODELS = ["gpt-oss:120b-cloud", "mistral", "neural-chat", "llama2", "codellama", "dolphin-mixtral"]
 
 export async function getAvailableModels(): Promise<string[]> {
   try {

@@ -61,6 +61,8 @@ export interface UserProgress {
   errorType?: string // type of error made (syntax, logic, edge-case, etc.)
   timeToFirstAttempt: number // time before first submission
   attemptSequence: Array<{ correct: boolean; timeSpent: number }> // all attempts
+  solutionViewed: boolean
+  solutionViewedAt?: number
 }
 
 export interface TopicStats {
