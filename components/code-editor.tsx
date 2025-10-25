@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { RotateCcw, Play, CheckCircle2, XCircle } from "lucide-react"
+import { RotateCcw, CheckCircle2, XCircle } from "lucide-react"
 import { evaluateCode, simpleCodeValidation } from "@/lib/code-evaluator"
 import type { TestCase } from "@/lib/types"
 
@@ -154,8 +154,8 @@ export function CodeEditor({ initialCode, onSubmit, onReload, isLoading = false,
           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
           size="lg"
         >
-          <Play className="w-4 h-4 mr-2" />
-          {isEvaluating ? "Running..." : "Run & Test"}
+          <CheckCircle2 className="w-4 h-4 mr-2" />
+          {isEvaluating ? "Validating..." : "Validate Code"}
         </Button>
         <Button onClick={handleResetCode} variant="outline" size="lg" title="Reset code to starter template">
           <RotateCcw className="w-4 h-4" />

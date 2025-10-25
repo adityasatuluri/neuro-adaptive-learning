@@ -1,12 +1,20 @@
 import type { UserProfile, LearningPath, TopicStats } from "./types"
 import { predefinedLearningPaths } from "./question-templates"
 import { getCachedCSVQuestions, loadCSVDataset } from "./csv-loader"
+import { createSeedUserProfile } from "./seed-data"
 
 const USER_PROFILE_KEY = "neuro_user_profile"
 const LEARNING_PATH_KEY = "neuro_learning_path"
 const AI_QUESTIONS_CACHE_KEY = "neuro_ai_questions_cache"
 
 export function initializeUserProfile(): UserProfile {
+  const hasExistingProfile = typeof window !== "undefined" && localStorage.getItem(USER_PROFILE_KEY)
+
+  if (!hasExistingProfile && typeof window !== "undefined") {
+    // First time user - use seed data to show pre-populated progress
+    return createSeedUserProfile()
+  }
+
   return {
     currentDifficulty: "easy",
     totalQuestionsAttempted: 0,
@@ -90,6 +98,11 @@ export function setCurrentLearningPath(pathId: string): void {
 export function resetUserProgress(): void {
   if (typeof window === "undefined") return
   localStorage.removeItem(USER_PROFILE_KEY)
+  localStorage.removeItem(LEARNING_PATH_KEY)
+  localStorage.removeItem(AI_QUESTIONS_CACHE_KEY)
+  localStorage.removeItem("neuro_rl_qtable")
+  localStorage.removeItem("neuro_rl_metrics")
+  localStorage.removeItem("leetcode_csv_dataset_cache")
 }
 
 export function cacheAIQuestion(question: any): void {

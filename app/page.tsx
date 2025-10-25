@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { QuestionDisplay } from "@/components/question-display"
 import { AdvancedCodeEditor } from "@/components/advanced-code-editor"
 import { ProgressStats } from "@/components/progress-stats"
@@ -18,10 +17,14 @@ import {
   clearOldAIQuestionCache,
   initializeQuestionCache,
   loadCSVDataset,
+  resetUserProgress,
 } from "@/lib/storage"
 import { updateUserProfile, selectNextQuestion, selectRandomQuestionSameDifficulty } from "@/lib/adaptive-algorithm"
 import { generateQuestionByDifficulty } from "@/app/actions/generate-question"
 import type { Question, UserProfile } from "@/lib/types"
+import { AICodeReview } from "@/components/ai-code-review"
+import { validateCodeWithAI } from "@/lib/ai-code-reviewer"
+import type { CodeValidationResult } from "@/lib/ai-code-reviewer"
 
 export default function Home() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -31,8 +34,9 @@ export default function Home() {
   const [startTime, setStartTime] = useState<number>(0)
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
   const [selectedModel, setSelectedModel] = useState("grok-oss:120b-cloud")
+  const [codeValidation, setCodeValidation] = useState<CodeValidationResult | null>(null)
+  const [isValidatingCode, setIsValidatingCode] = useState(false)
 
-  // Initialize user profile and load first question
   useEffect(() => {
     const userProfile = getUserProfile()
     setProfile(userProfile)
@@ -54,7 +58,6 @@ export default function Home() {
     const nextQuestion = selectNextQuestion(questionTemplates, userProfile, topic)
 
     if (!nextQuestion) {
-      // Reset progress history to allow re-attempting questions
       const resetProfile = { ...userProfile, progressHistory: [] }
       setProfile(resetProfile)
       saveUserProfile(resetProfile)
@@ -83,34 +86,58 @@ export default function Home() {
     }
   }
 
-  const handleSubmitCode = async (code: string, isCorrect: boolean) => {
+  const handleSubmitCode = async (code: string) => {
     if (!currentQuestion || !profile) return
 
-    setIsSubmitting(true)
+    setIsValidatingCode(true)
+    try {
+      console.log("[v0] Validating code with AI...")
+      const validation = await validateCodeWithAI(
+        code,
+        currentQuestion.description,
+        currentQuestion.expectedOutput,
+        selectedModel,
+      )
 
-    const timeSpent = Math.round((Date.now() - startTime) / 1000)
+      if (validation) {
+        setCodeValidation(validation)
+        console.log("[v0] Validation result:", validation.passed)
 
-    const updatedProfile = updateUserProfile(profile, currentQuestion, isCorrect, timeSpent, code)
+        if (validation.passed) {
+          const timeSpent = Math.round((Date.now() - startTime) / 1000)
+          const updatedProfile = updateUserProfile(profile, currentQuestion, true, timeSpent, code)
+          setProfile(updatedProfile)
+          saveUserProfile(updatedProfile)
 
-    setProfile(updatedProfile)
-    saveUserProfile(updatedProfile)
+          setFeedback({
+            type: "success",
+            message: `Correct! Time: ${timeSpent}s. Difficulty: ${updatedProfile.currentDifficulty}`,
+          })
 
-    if (isCorrect) {
-      setFeedback({
-        type: "success",
-        message: `Correct! Time: ${timeSpent}s. Difficulty: ${updatedProfile.currentDifficulty}`,
-      })
-      setTimeout(() => {
-        loadNextQuestion(updatedProfile)
-      }, 2000)
-    } else {
+          setTimeout(() => {
+            loadNextQuestion(updatedProfile)
+          }, 2000)
+        } else {
+          setFeedback({
+            type: "error",
+            message: "Code validation failed. Try again!",
+          })
+        }
+      } else {
+        setFeedback({
+          type: "error",
+          message: "Failed to validate code. Please try again.",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error validating code:", error)
       setFeedback({
         type: "error",
-        message: "Not quite right. Try again or check the hints!",
+        message: "Error validating code. Check your connection.",
       })
+    } finally {
+      setIsValidatingCode(false)
     }
-
-    setIsSubmitting(false)
   }
 
   const handleGenerateQuestion = async () => {
@@ -135,7 +162,6 @@ export default function Home() {
           estimatedTime: 600,
         }
 
-        // Cache it for future use
         cacheAIQuestion(aiQuestion)
         clearOldAIQuestionCache()
 
@@ -184,13 +210,8 @@ export default function Home() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">Code Learning Platform</h1>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Neuro Adaptive System</h1>
             <p className="text-muted-foreground">Master Python through adaptive coding challenges</p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/analytics">
-              <Button variant="outline">View Analytics</Button>
-            </Link>
           </div>
         </div>
 
@@ -227,6 +248,10 @@ export default function Home() {
                 <p className="font-semibold">{feedback.message}</p>
               </Card>
             )}
+
+            <div className="mt-6">
+              <AICodeReview validation={codeValidation} isLoading={isValidatingCode} />
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -274,7 +299,7 @@ export default function Home() {
             <Button
               onClick={() => {
                 if (confirm("Reset all progress?")) {
-                  localStorage.removeItem("neuro_user_profile")
+                  resetUserProgress()
                   window.location.reload()
                 }
               }}

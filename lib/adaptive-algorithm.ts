@@ -1,6 +1,15 @@
 import type { UserProfile, Question, PerformanceMetrics, LearningAnalytics } from "./types"
 import { getCachedAIQuestions } from "./storage"
 import { getCachedCSVQuestions } from "./csv-loader"
+import {
+  getCurrentState,
+  calculateReward,
+  selectAction,
+  updateQValue,
+  loadRLMetrics,
+  saveRLMetrics,
+  decayExplorationRate,
+} from "./reinforcement-learning"
 
 const SPACED_REPETITION_INTERVALS = [
   { days: 0.5, name: "30 minutes" },
@@ -251,6 +260,36 @@ export function calculateLearningAnalytics(profile: UserProfile): LearningAnalyt
     estimatedMasteryDate,
     learningStyle,
   }
+}
+
+export function calculateNextDifficultyWithRL(profile: UserProfile, topicId: string): "easy" | "medium" | "hard" {
+  const metrics = calculatePerformanceMetrics(profile)
+  const recentAttempts = profile.progressHistory.slice(-20)
+
+  if (recentAttempts.length < 5) {
+    return "easy"
+  }
+
+  // Load RL metrics
+  const rlMetrics = loadRLMetrics()
+  const currentState = getCurrentState(profile, topicId)
+
+  // Select action using RL
+  const action = selectAction(rlMetrics.qTable, currentState, rlMetrics.explorationRate)
+
+  // Map RL action to difficulty
+  let nextDifficulty = profile.currentDifficulty
+
+  if (action === "upgrade") {
+    if (profile.currentDifficulty === "easy") nextDifficulty = "medium"
+    else if (profile.currentDifficulty === "medium") nextDifficulty = "hard"
+  } else if (action === "downgrade") {
+    if (profile.currentDifficulty === "hard") nextDifficulty = "medium"
+    else if (profile.currentDifficulty === "medium") nextDifficulty = "easy"
+  }
+  // maintain, focusWeak, focusStrong keep current difficulty
+
+  return nextDifficulty
 }
 
 export function calculateNextDifficulty(profile: UserProfile): "easy" | "medium" | "hard" {
@@ -530,6 +569,54 @@ export function updateUserProfile(
     }
   }
   updatedProfile.lastActivityDate = Date.now()
+
+  return updatedProfile
+}
+
+export function updateUserProfileWithRL(
+  profile: UserProfile,
+  question: Question,
+  isCorrect: boolean,
+  timeSpent: number,
+  submittedCode: string,
+  confidence = 50,
+  errorType?: string,
+  conceptsInvolved: string[] = [],
+  topicId = "default",
+): UserProfile {
+  // First, update profile normally
+  const updatedProfile = updateUserProfile(
+    profile,
+    question,
+    isCorrect,
+    timeSpent,
+    submittedCode,
+    confidence,
+    errorType,
+    conceptsInvolved,
+  )
+
+  // Then, update RL Q-table
+  const rlMetrics = loadRLMetrics()
+  const currentState = getCurrentState(profile, topicId)
+  const nextState = getCurrentState(updatedProfile, topicId)
+
+  // Calculate reward
+  const previousAccuracy = profile.performanceMetrics.accuracy
+  const reward = calculateReward(isCorrect, updatedProfile.performanceMetrics.accuracy, timeSpent, previousAccuracy)
+
+  // Select action and update Q-value
+  const action = selectAction(rlMetrics.qTable, currentState, rlMetrics.explorationRate)
+  rlMetrics.qTable = updateQValue(rlMetrics.qTable, currentState, action, reward, nextState)
+
+  // Update metrics
+  rlMetrics.episodeCount += 1
+  rlMetrics.totalReward += reward
+  rlMetrics.averageReward = rlMetrics.totalReward / rlMetrics.episodeCount
+  rlMetrics.explorationRate = decayExplorationRate(rlMetrics.episodeCount)
+
+  // Save updated metrics
+  saveRLMetrics(rlMetrics)
 
   return updatedProfile
 }

@@ -4,9 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { RotateCcw, Play, CheckCircle2, XCircle, Copy, Check } from "lucide-react"
-import { evaluateCode, simpleCodeValidation } from "@/lib/code-evaluator"
-import { highlightCode } from "@/lib/syntax-highlighter"
+import { RotateCcw, CheckCircle2, XCircle, Copy, Check } from "lucide-react"
 import type { TestCase } from "@/lib/types"
 
 interface AdvancedCodeEditorProps {
@@ -32,35 +30,18 @@ export function AdvancedCodeEditor({
   const [evaluationResult, setEvaluationResult] = useState<any>(null)
   const [copied, setCopied] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const highlightRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setCode(initialCode)
     setCharCount(initialCode.length)
     setEvaluationResult(null)
-    updateHighlight(initialCode)
   }, [initialCode])
-
-  const updateHighlight = (newCode: string) => {
-    if (highlightRef.current) {
-      const highlighted = highlightCode(newCode, language)
-      highlightRef.current.innerHTML = highlighted
-    }
-  }
-
-  const handleScroll = () => {
-    if (highlightRef.current && textareaRef.current) {
-      highlightRef.current.scrollTop = textareaRef.current.scrollTop
-      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft
-    }
-  }
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newCode = e.target.value
     setCode(newCode)
     setCharCount(newCode.length)
-    updateHighlight(newCode)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -83,7 +64,6 @@ export function AdvancedCodeEditor({
         const newCode = beforeSelection + indentedText + afterSelection
         setCode(newCode)
         setCharCount(newCode.length)
-        updateHighlight(newCode)
 
         setTimeout(() => {
           textarea.selectionStart = start
@@ -93,7 +73,6 @@ export function AdvancedCodeEditor({
         const newCode = code.substring(0, start) + "    " + code.substring(end)
         setCode(newCode)
         setCharCount(newCode.length)
-        updateHighlight(newCode)
 
         setTimeout(() => {
           textarea.selectionStart = textarea.selectionEnd = start + 4
@@ -111,7 +90,6 @@ export function AdvancedCodeEditor({
         const newCode = code.substring(0, start - 4) + code.substring(start)
         setCode(newCode)
         setCharCount(newCode.length)
-        updateHighlight(newCode)
 
         setTimeout(() => {
           textarea.selectionStart = textarea.selectionEnd = start - 4
@@ -124,7 +102,6 @@ export function AdvancedCodeEditor({
     setCode(initialCode)
     setCharCount(initialCode.length)
     setEvaluationResult(null)
-    updateHighlight(initialCode)
   }
 
   const handleCopyCode = () => {
@@ -134,39 +111,8 @@ export function AdvancedCodeEditor({
   }
 
   const handleRunCode = async () => {
-    setIsEvaluating(true)
-    try {
-      let result
-      if (testCases.length > 0) {
-        result = await evaluateCode(code, testCases)
-      } else {
-        result = simpleCodeValidation(code, testCases)
-      }
-
-      setEvaluationResult(result)
-
-      if (result.passed) {
-        onSubmit(code, true)
-      }
-    } catch (error) {
-      console.error("[v0] Code evaluation error:", error)
-      setEvaluationResult({
-        passed: false,
-        totalTests: testCases.length,
-        passedTests: 0,
-        failedTests: testCases,
-        errors: ["Failed to evaluate code. Please try again."],
-        executionTime: 0,
-        output: "",
-      })
-    } finally {
-      setIsEvaluating(false)
-    }
+    onSubmit(code, false)
   }
-
-  const passPercentage = evaluationResult
-    ? Math.round((evaluationResult.passedTests / evaluationResult.totalTests) * 100)
-    : 0
 
   const lineCount = code.split("\n").length
 
@@ -194,32 +140,16 @@ export function AdvancedCodeEditor({
             ))}
           </div>
 
-          <pre className="absolute left-12 top-0 bottom-0 right-0 p-3 m-0 text-sm font-mono text-foreground pointer-events-none overflow-hidden">
-            <code
-              ref={highlightRef}
-              className="syntax-highlight"
-              style={{
-                color: "inherit",
-                backgroundColor: "transparent",
-              }}
-            >
-              {code}
-            </code>
-          </pre>
-
           <textarea
             ref={textareaRef}
             value={code}
             onChange={handleCodeChange}
             onKeyDown={handleKeyDown}
-            onScroll={handleScroll}
-            className="relative left-12 w-[calc(100%-3rem)] h-64 p-3 font-mono text-sm bg-transparent text-foreground border-0 focus:outline-none focus:ring-0 resize-none"
+            className="relative left-12 w-[calc(100%-3rem)] h-64 p-3 font-mono text-sm bg-background text-foreground border-0 focus:outline-none focus:ring-0 resize-none"
             placeholder="Write your code here..."
             spellCheck="false"
             style={{
-              color: "transparent",
               caretColor: "hsl(var(--foreground))",
-              backgroundColor: "transparent",
             }}
           />
         </div>
@@ -243,20 +173,6 @@ export function AdvancedCodeEditor({
                   {evaluationResult.passed ? "All Tests Passed!" : "Tests Failed"}
                 </h4>
               </div>
-              <span
-                className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                  evaluationResult.passed ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"
-                }`}
-              >
-                {evaluationResult.passedTests}/{evaluationResult.totalTests} passed
-              </span>
-            </div>
-
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${evaluationResult.passed ? "bg-green-600" : "bg-red-600"}`}
-                style={{ width: `${passPercentage}%` }}
-              />
             </div>
 
             {evaluationResult.errors.length > 0 && (
@@ -274,8 +190,6 @@ export function AdvancedCodeEditor({
                 ))}
               </div>
             )}
-
-            <p className="text-xs text-muted-foreground">Execution time: {evaluationResult.executionTime}ms</p>
           </div>
         </Card>
       )}
@@ -287,8 +201,8 @@ export function AdvancedCodeEditor({
           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
           size="lg"
         >
-          <Play className="w-4 h-4 mr-2" />
-          {isEvaluating ? "Running..." : "Run & Test"}
+          <CheckCircle2 className="w-4 h-4 mr-2" />
+          {isEvaluating ? "Validating..." : "Validate Code"}
         </Button>
         <Button onClick={handleResetCode} variant="outline" size="lg" title="Reset code to starter template">
           <RotateCcw className="w-4 h-4" />

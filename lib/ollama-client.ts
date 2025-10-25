@@ -6,23 +6,34 @@ import { z } from "zod"
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434"
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "grok-oss:120b-cloud"
 
+const DEFAULT_MODELS = ["grok-oss:120b-cloud", "mistral", "neural-chat", "llama2", "codellama", "dolphin-mixtral"]
+
 export async function getAvailableModels(): Promise<string[]> {
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
     const tagsResponse = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
       method: "GET",
+      signal: controller.signal,
     })
 
+    clearTimeout(timeoutId)
+
     if (!tagsResponse.ok) {
-      console.error("[v0] Failed to fetch available models")
-      return []
+      console.warn("[v0] Failed to fetch available models from Ollama, using defaults")
+      return DEFAULT_MODELS
     }
 
     const tagsData = await tagsResponse.json()
     const models = tagsData.models || []
-    return models.map((m: any) => m.name)
+    const modelNames = models.map((m: any) => m.name)
+
+    // Return fetched models if available, otherwise return defaults
+    return modelNames.length > 0 ? modelNames : DEFAULT_MODELS
   } catch (error) {
-    console.error("[v0] Error fetching models:", error)
-    return []
+    console.warn("[v0] Error fetching models from Ollama, using defaults:", error)
+    return DEFAULT_MODELS
   }
 }
 

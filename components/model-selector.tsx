@@ -13,6 +13,7 @@ interface ModelSelectorProps {
 export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps) {
   const [models, setModels] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isOllamaConnected, setIsOllamaConnected] = useState(false)
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -20,8 +21,10 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
       try {
         const availableModels = await getAvailableModels()
         setModels(availableModels)
+        setIsOllamaConnected(availableModels.length > 0)
       } catch (error) {
         console.error("[v0] Error fetching models:", error)
+        setIsOllamaConnected(false)
       } finally {
         setIsLoading(false)
       }
@@ -33,7 +36,7 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
   return (
     <Card className="p-4">
       <h3 className="font-semibold text-foreground mb-3">AI Model</h3>
-      <Select value={selectedModel} onValueChange={onModelChange} disabled={isLoading || models.length === 0}>
+      <Select value={selectedModel} onValueChange={onModelChange} disabled={isLoading}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={isLoading ? "Loading models..." : "Select a model"} />
         </SelectTrigger>
@@ -45,8 +48,8 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
           ))}
         </SelectContent>
       </Select>
-      {models.length === 0 && !isLoading && (
-        <p className="text-xs text-muted-foreground mt-2">No models available. Ensure Ollama is running.</p>
+      {!isOllamaConnected && !isLoading && (
+        <p className="text-xs text-muted-foreground mt-2">Using default models. Connect Ollama for more options.</p>
       )}
     </Card>
   )
