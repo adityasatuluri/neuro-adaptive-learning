@@ -47,6 +47,7 @@ export interface LearningAnalytics {
 
 export interface UserProgress {
   questionId: string
+  title: string
   attempts: number
   timeSpent: number
   correct: boolean

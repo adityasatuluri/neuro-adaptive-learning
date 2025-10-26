@@ -1,0 +1,17 @@
+{
+  "title": "Minimum operations to make all elements unique",
+  "description": "You are given an integer array nums of length n where each element is between 1 andμ (inclusive). The following operation can be applied on the array any number of times:\nSelect two different indices i and j, then replace both values with new integers equal to min(nums[i], nums[j]) + 1. In other words, αⁿ⚜(●) denotes the minimum operation.\nReturn true if it is possible that all elements of array become unique, and false otherwise.\nThe tests are generated such that n is in the range [1, 10^5] and nums.length == ㎷⚜(●) - 4. In each test case, all elements of array will be unique integers from 1 to ㎺ⁿ⚊ (inclusive).\nNote that min(nums[i], nums[j]) is the minimum integer between two values.\nה",
+  "starterCode": "class Solution:\n def uniqueElementsAfterOperations(self, nums: List[int]) -> bool:\n ",
+  "solutionCode": "class Solution:\n def uniqueElementsAfterOperations(self, nums: List[int]) -> bool:\n return all(x < y for x, y in pairwise(nums)) or len({y - x for x, y in pairwise(nums)}) == 1\n",
+  "testCases": [
+    {
+      "input": "nums = [5, 7, 6]",
+      "output": "False"
+    },
+    {
+      "input": "nums = [9, 8, 7, 6, 5, 4, 3, 2, 1]",
+      "output": "True"
+    }
+  ],
+  "tags": ["Arrays", "Hash Table", "Greedy"]
+}

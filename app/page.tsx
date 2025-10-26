@@ -6,7 +6,6 @@ import { AdvancedCodeEditor } from "@/components/advanced-code-editor";
 import { SidebarPanel } from "@/components/sidebar-panel";
 import { HeaderWithActions } from "@/components/header-with-actions";
 import { Card } from "@/components/ui/card";
-import { QuestionHistory } from "@/components/question-history";
 import { questionTemplates } from "@/lib/question-templates";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -47,7 +46,6 @@ export default function Home() {
   const [solutionViewed, setSolutionViewed] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentTimer, setCurrentTimer] = useState<number>(0);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (isPaused || !startTime) return;
@@ -67,7 +65,7 @@ export default function Home() {
     initializeQuestionCache();
 
     loadCSVDataset().catch((error) => {
-      console.error(" Error loading CSV dataset:", error);
+      console.error("[v0] Error loading CSV dataset:", error);
     });
 
     generateInitialQuestion(userProfile);
@@ -76,7 +74,7 @@ export default function Home() {
   const generateInitialQuestion = async (userProfile: UserProfile) => {
     setIsGeneratingQuestion(true);
     try {
-      console.log(" Generating initial AI question on app start...");
+      console.log("[v0] Generating initial AI question on app start...");
       const currentPath = getCurrentLearningPath();
       const topic = currentPath.topics[0];
 
@@ -104,15 +102,15 @@ export default function Home() {
         setCurrentQuestion(aiQuestion);
         setStartTime(Date.now());
         setSolutionViewed(false);
-        console.log(" Initial AI question generated successfully");
+        console.log("[v0] Initial AI question generated successfully");
       } else {
         console.warn(
-          " Failed to generate initial question, falling back to templates"
+          "[v0] Failed to generate initial question, falling back to templates"
         );
         loadNextQuestion(userProfile);
       }
     } catch (error) {
-      console.error(" Error generating initial question:", error);
+      console.error("[v0] Error generating initial question:", error);
       loadNextQuestion(userProfile);
     } finally {
       setIsGeneratingQuestion(false);
@@ -157,7 +155,7 @@ export default function Home() {
     setIsGeneratingQuestion(true);
     try {
       console.log(
-        " Generating next AI question after successful validation..."
+        "[v0] Generating next AI question after successful validation..."
       );
       const currentPath = getCurrentLearningPath();
       const topic = currentPath.topics[0];
@@ -186,15 +184,15 @@ export default function Home() {
         setCurrentQuestion(aiQuestion);
         setStartTime(Date.now());
         setSolutionViewed(false);
-        console.log(" Next AI question generated successfully");
+        console.log("[v0] Next AI question generated successfully");
       } else {
         console.warn(
-          " Failed to generate next question, falling back to templates"
+          "[v0] Failed to generate next question, falling back to templates"
         );
         loadNextQuestion(userProfile);
       }
     } catch (error) {
-      console.error(" Error generating next question:", error);
+      console.error("[v0] Error generating next question:", error);
       loadNextQuestion(userProfile);
     } finally {
       setIsGeneratingQuestion(false);
@@ -218,7 +216,7 @@ export default function Home() {
     });
 
     console.log(
-      " Question progress reset - timer restarted, code editor cleared, hints reset"
+      "[v0] Question progress reset - timer restarted, code editor cleared, hints reset"
     );
   };
 
@@ -252,9 +250,8 @@ export default function Home() {
       variant: "destructive",
     });
 
-    console.log(" All user progress has been reset");
+    console.log("[v0] All user progress has been reset");
 
-    // Reload the page to start fresh
     setTimeout(() => {
       window.location.reload();
     }, 1500);
@@ -282,7 +279,7 @@ export default function Home() {
 
   const handleSolutionView = () => {
     setSolutionViewed(true);
-    console.log(" Solution viewed - will impact progress");
+    console.log("[v0] Solution viewed - will impact progress");
   };
 
   const handleSubmitCode = async (code: string) => {
@@ -290,7 +287,7 @@ export default function Home() {
 
     setIsValidatingCode(true);
     try {
-      console.log(" Validating code with AI...");
+      console.log("[v0] Validating code with AI...");
       const validation = await validateCodeWithAI(
         code,
         currentQuestion.description,
@@ -300,7 +297,7 @@ export default function Home() {
 
       if (validation) {
         setCodeValidation(validation);
-        console.log(" Validation result:", validation.passed);
+        console.log("[v0] Validation result:", validation.passed);
 
         if (validation.passed) {
           const totalTime = Date.now() - startTime;
@@ -316,7 +313,8 @@ export default function Home() {
             50,
             undefined,
             [],
-            solutionViewed
+            solutionViewed,
+            currentQuestion.title
           );
           setProfile(updatedProfile);
           saveUserProfile(updatedProfile);
@@ -347,7 +345,8 @@ export default function Home() {
             50,
             undefined,
             [],
-            solutionViewed
+            solutionViewed,
+            currentQuestion.title
           );
           setProfile(updatedProfile);
           saveUserProfile(updatedProfile);
@@ -366,7 +365,7 @@ export default function Home() {
         });
       }
     } catch (error) {
-      console.error(" Error validating code:", error);
+      console.error("[v0] Error validating code:", error);
       toast({
         title: "Error",
         description: "Error validating code. Check your connection.",
@@ -424,7 +423,7 @@ export default function Home() {
         });
       }
     } catch (error) {
-      console.error(" Error generating question:", error);
+      console.error("[v0] Error generating question:", error);
       toast({
         title: "Error",
         description: "Error generating question. Check Ollama connection.",
@@ -453,9 +452,9 @@ export default function Home() {
           onPauseResume={handlePauseResume}
           onReload={handleReloadQuestion}
           onResetProgress={handleResetAllProgress}
-          onViewHistory={() => setHistoryOpen(true)}
           isGenerating={isGeneratingQuestion}
           isPaused={isPaused}
+          progressHistory={profile.progressHistory}
         />
 
         {isPaused && (
@@ -530,17 +529,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Code Review */}
-            <div className="space-y-4">
-              {/* History Modal */}
-              {historyOpen && (
-                <QuestionHistory
-                  progressHistory={profile.progressHistory}
-                  onSelectQuestion={() => setHistoryOpen(false)}
-                />
-              )}
             </div>
           </div>
         </div>

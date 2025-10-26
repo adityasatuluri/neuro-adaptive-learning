@@ -29,7 +29,7 @@ export async function getAvailableModels(): Promise<string[]> {
 
     if (!tagsResponse.ok) {
       console.warn(
-        " Failed to fetch available models from Ollama, using defaults"
+        "[v0] Failed to fetch available models from Ollama, using defaults"
       );
       return DEFAULT_MODELS;
     }
@@ -41,7 +41,10 @@ export async function getAvailableModels(): Promise<string[]> {
     // Return fetched models if available, otherwise return defaults
     return modelNames.length > 0 ? modelNames : DEFAULT_MODELS;
   } catch (error) {
-    console.warn(" Error fetching models from Ollama, using defaults:", error);
+    console.warn(
+      "[v0] Error fetching models from Ollama, using defaults:",
+      error
+    );
     return DEFAULT_MODELS;
   }
 }
@@ -52,7 +55,7 @@ const questionSchema = z.object({
   starterCode: z.string(),
   solutionCode: z.string(),
   expectedOutput: z.string(),
-  hints: z.array(z.string()),
+  // hints: z.array(z.string()),
   testCases: z.array(
     z.object({
       input: z.string(),
@@ -76,20 +79,20 @@ export type GeneratedLearningPath = z.infer<typeof learningPathSchema>;
 
 async function checkAndLoadModel(model: string): Promise<boolean> {
   try {
-    console.log(" Checking available models...");
+    console.log("[v0] Checking available models...");
     const tagsResponse = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
       method: "GET",
     });
 
     if (!tagsResponse.ok) {
-      console.error(" Failed to fetch available models");
+      console.error("[v0] Failed to fetch available models");
       return false;
     }
 
     const tagsData = await tagsResponse.json();
     const models = tagsData.models || [];
     console.log(
-      " Available models:",
+      "[v0] Available models:",
       models.map((m: any) => m.name)
     );
 
@@ -98,19 +101,19 @@ async function checkAndLoadModel(model: string): Promise<boolean> {
 
     if (!modelExists) {
       console.warn(
-        ` Model '${model}' not found. Available models:`,
+        `[v0] Model '${model}' not found. Available models:`,
         models.map((m: any) => m.name)
       );
       if (models.length > 0) {
-        console.log(` Using first available model: ${models[0].name}`);
+        console.log(`[v0] Using first available model: ${models[0].name}`);
       }
       return false;
     }
 
-    console.log(` Model '${model}' is available`);
+    console.log(`[v0] Model '${model}' is available`);
     return true;
   } catch (error) {
-    console.error(" Error checking models:", error);
+    console.error("[v0] Error checking models:", error);
     return false;
   }
 }
@@ -126,7 +129,7 @@ async function callOllama(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(
-        ` Ollama attempt ${attempt}/${maxRetries} with model: ${model}`
+        `[v0] Ollama attempt ${attempt}/${maxRetries} with model: ${model}`
       );
 
       const controller = new AbortController();
@@ -153,33 +156,33 @@ async function callOllama(
 
       if (!response.ok) {
         console.error(
-          ` Ollama API error: ${response.status} ${response.statusText}`
+          `[v0] Ollama API error: ${response.status} ${response.statusText}`
         );
         const errorText = await response.text();
-        console.error(" Error response:", errorText);
+        console.error("[v0] Error response:", errorText);
 
         if (attempt < maxRetries) {
           const delay = 1000 * attempt;
-          console.log(` Retrying in ${delay}ms...`);
+          console.log(`[v0] Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
         continue;
       }
 
       const data = await response.json();
-      console.log(" Ollama response received successfully");
+      console.log("[v0] Ollama response received successfully");
       return data.response || null;
     } catch (error) {
-      console.error(` Ollama call error (attempt ${attempt}):`, error);
+      console.error(`[v0] Ollama call error (attempt ${attempt}):`, error);
       if (attempt < maxRetries) {
         const delay = 1000 * attempt;
-        console.log(` Retrying in ${delay}ms...`);
+        console.log(`[v0] Retrying in ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
 
-  console.error(" All Ollama attempts failed");
+  console.error("[v0] All Ollama attempts failed");
   return null;
 }
 
@@ -188,7 +191,7 @@ function extractJsonFromResponse(content: string): string | null {
   const jsonEnd = content.lastIndexOf("}");
 
   if (jsonStart === -1 || jsonEnd === -1) {
-    console.warn(" No JSON found in response");
+    console.warn("[v0] No JSON found in response");
     return null;
   }
 
@@ -289,29 +292,31 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
 
   const response = await callOllama(prompt, model);
   if (!response) {
-    console.error(" No response from Ollama for adaptive question generation");
+    console.error(
+      "[v0] No response from Ollama for adaptive question generation"
+    );
     return null;
   }
 
   const jsonStr = extractJsonFromResponse(response);
   if (!jsonStr) {
-    console.error(" Could not extract JSON from response");
+    console.error("[v0] Could not extract JSON from response");
     return null;
   }
 
   try {
     const sanitized = sanitizeJsonString(jsonStr);
-    console.log(" Sanitized JSON:", sanitized.substring(0, 100) + "...");
+    console.log("[v0] Sanitized JSON:", sanitized.substring(0, 100) + "...");
     const parsed = JSON.parse(sanitized);
     console.log(
-      " FINAL AI RESPONSE (Adaptive Question):",
+      "[v0] FINAL AI RESPONSE (Adaptive Question):",
       JSON.stringify(parsed, null, 2)
     );
     const validated = questionSchema.parse(parsed);
-    console.log(" Adaptive question generated successfully");
+    console.log("[v0] Adaptive question generated successfully");
     return validated;
   } catch (error) {
-    console.error(" Adaptive question parsing error:", error);
+    console.error("[v0] Adaptive question parsing error:", error);
     return null;
   }
 }
@@ -322,64 +327,42 @@ export async function generateQuestionByDifficulty(
   model: string = OLLAMA_MODEL
 ): Promise<GeneratedQuestion | null> {
   const difficultyGuides = {
-    easy: "beginner-friendly, 2-5 minutes, basic syntax, simple concepts",
-    medium:
-      "intermediate, 5-15 minutes, data structures, some algorithmic thinking",
-    hard: "advanced, 15-30 minutes, complex algorithms, optimization required",
+    easy: "easy",
+    medium: "medium",
+    hard: "hard",
   };
 
-  const topicContext = topic ? `Focus on the topic: ${topic}.` : "";
+  const topicContext = topic
+    ? topic
+    : "Array, String, or Dictionary manipulation";
 
-  const prompt = `Generate a unique Python coding question that is ${difficultyGuides[difficulty]}.
-${topicContext}
-
-Create a question with:
-1. A clear, engaging title
-2. Detailed description of what to solve
-3. Starter code template (incomplete, for the user to fill in)
-4. Complete solution code (the full working solution)
-5. Expected output
-6. 3-4 helpful hints
-7. 2-3 test cases with inputs and expected outputs
-8. Relevant tags
-
-Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
-{
-  "title": "string",
-  "description": "string",
-  "starterCode": "string",
-  "solutionCode": "string",
-  "expectedOutput": "string",
-  "hints": ["string", "string", "string"],
-  "testCases": [{"input": "string", "expectedOutput": "string"}],
-  "tags": ["string"]
-}`;
-
+  const prompt = `${difficultyGuides[difficulty]} question in ${topicContext}`;
+  console.log(prompt, model);
   const response = await callOllama(prompt, model);
   if (!response) {
-    console.error(" No response from Ollama for question generation");
+    console.error("[v0] No response from Ollama for question generation");
     return null;
   }
 
   const jsonStr = extractJsonFromResponse(response);
   if (!jsonStr) {
-    console.error(" Could not extract JSON from response");
+    console.error("[v0] Could not extract JSON from response");
     return null;
   }
 
   try {
     const sanitized = sanitizeJsonString(jsonStr);
-    console.log(" Sanitized JSON:", sanitized.substring(0, 100) + "...");
+    console.log("[v0] Sanitized JSON:", sanitized);
     const parsed = JSON.parse(sanitized);
     console.log(
-      " FINAL AI RESPONSE (Question):",
+      "[v0] FINAL AI RESPONSE (Question):",
       JSON.stringify(parsed, null, 2)
     );
     const validated = questionSchema.parse(parsed);
-    console.log(" Question generated successfully");
+    console.log("[v0] Question generated successfully");
     return validated;
   } catch (error) {
-    console.error(" Question parsing error:", error);
+    console.error("[v0] Question parsing error:", error);
     return null;
   }
 }
@@ -423,29 +406,29 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
 
   const response = await callOllama(prompt, model);
   if (!response) {
-    console.error(" No response from Ollama for learning path generation");
+    console.error("[v0] No response from Ollama for learning path generation");
     return null;
   }
 
   const jsonStr = extractJsonFromResponse(response);
   if (!jsonStr) {
-    console.error(" Could not extract JSON from response");
+    console.error("[v0] Could not extract JSON from response");
     return null;
   }
 
   try {
     const sanitized = sanitizeJsonString(jsonStr);
-    console.log(" Sanitized JSON:", sanitized.substring(0, 100) + "...");
+    console.log("[v0] Sanitized JSON:", sanitized.substring(0, 100) + "...");
     const parsed = JSON.parse(sanitized);
     console.log(
-      " FINAL AI RESPONSE (Learning Path):",
+      "[v0] FINAL AI RESPONSE (Learning Path):",
       JSON.stringify(parsed, null, 2)
     );
     const validated = learningPathSchema.parse(parsed);
-    console.log(" Learning path generated successfully");
+    console.log("[v0] Learning path generated successfully");
     return validated;
   } catch (error) {
-    console.error(" Learning path parsing error:", error);
+    console.error("[v0] Learning path parsing error:", error);
     return null;
   }
 }
@@ -459,7 +442,7 @@ export async function generateQuestionsByBatch(
   const questions: GeneratedQuestion[] = [];
 
   for (let i = 0; i < count; i++) {
-    console.log(` Generating question ${i + 1}/${count}...`);
+    console.log(`[v0] Generating question ${i + 1}/${count}...`);
     const question = await generateQuestionByDifficulty(
       difficulty,
       topic,
@@ -473,7 +456,7 @@ export async function generateQuestionsByBatch(
   }
 
   console.log(
-    ` Batch generation complete: ${questions.length}/${count} questions generated`
+    `[v0] Batch generation complete: ${questions.length}/${count} questions generated`
   );
   return questions;
 }

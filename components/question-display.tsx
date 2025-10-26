@@ -17,7 +17,7 @@ export function QuestionDisplay({ question, onSolutionView }: QuestionDisplayPro
   const [expandedSections, setExpandedSections] = useState({
     description: true,
     testCases: true,
-    hints: false,
+    // hints: false,
   })
 
   const difficultyColors = {
@@ -127,31 +127,7 @@ export function QuestionDisplay({ question, onSolutionView }: QuestionDisplayPro
         </div>
 
         {/* Hints */}
-        {question.hints.length > 0 && (
-          <div>
-            <button
-              onClick={() => toggleSection("hints")}
-              className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-muted transition-colors"
-            >
-              <h3 className="font-semibold text-foreground">Hints ({question.hints.length})</h3>
-              {expandedSections.hints ? (
-                <ChevronUp className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-muted-foreground" />
-              )}
-            </button>
-            {expandedSections.hints && (
-              <ul className="space-y-2 px-3 py-2">
-                {question.hints.map((hint, idx) => (
-                  <li key={idx} className="text-sm text-muted-foreground flex items-start">
-                    <span className="mr-2 font-bold">•</span>
-                    <span>{hint}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        
       </div>
 
       {/* Solution */}

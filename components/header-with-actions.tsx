@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sparkles, Pause, Play, RotateCcw, Trash2, History } from "lucide-react"
 import {
@@ -12,15 +13,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { QuestionHistory } from "@/components/question-history"
+import type { UserProgress } from "@/lib/types"
 
 interface HeaderWithActionsProps {
   onGenerate: () => void
   onPauseResume: () => void
   onReload: () => void
   onResetProgress: () => void
-  onViewHistory: () => void
   isGenerating: boolean
   isPaused: boolean
+  progressHistory: UserProgress[]
 }
 
 export function HeaderWithActions({
@@ -28,10 +31,12 @@ export function HeaderWithActions({
   onPauseResume,
   onReload,
   onResetProgress,
-  onViewHistory,
   isGenerating,
   isPaused,
+  progressHistory,
 }: HeaderWithActionsProps) {
+  const [historyOpen, setHistoryOpen] = useState(false)
+
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-6">
@@ -69,7 +74,7 @@ export function HeaderWithActions({
           </Button>
 
           <Button
-            onClick={onViewHistory}
+            onClick={() => setHistoryOpen(true)}
             size="icon"
             variant="outline"
             className="bg-transparent"
@@ -107,6 +112,15 @@ export function HeaderWithActions({
           </AlertDialog>
         </div>
       </div>
+
+      {historyOpen && (
+        <QuestionHistory
+          progressHistory={progressHistory}
+          onSelectQuestion={() => setHistoryOpen(false)}
+          isOpen={historyOpen}
+          onOpenChange={setHistoryOpen}
+        />
+      )}
     </div>
   )
 }
