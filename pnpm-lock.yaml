@@ -147,7 +147,7 @@ dependencies:
     specifier: latest
     version: 3.3.0(@types/react@19.2.2)(react-dom@19.2.0)(react-is@19.2.0)(react@19.2.0)(redux@5.0.1)
   sonner:
-    specifier: latest
+    specifier: ^2.0.7
     version: 2.0.7(react-dom@19.2.0)(react@19.2.0)
   tailwind-merge:
     specifier: ^2.5.5
@@ -1954,7 +1954,7 @@ packages:
 
   /@tailwindcss/oxide@4.1.16:
     resolution: {integrity: sha512-2OSv52FRuhdlgyOQqgtQHuCgXnS8nFSYRp2tJ+4WZXKgTxqPy7SMSls8c3mPT5pkZ17SBToGM5LHEJBO7miEdg==}
-    engines: {node: '>= 10'}
+    engines: {node: '>=14.0.0'}
     optionalDependencies:
       '@tailwindcss/oxide-android-arm64': 4.1.16
       '@tailwindcss/oxide-darwin-arm64': 4.1.16
@@ -1969,6 +1969,13 @@ packages:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.1.16
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.16
     dev: true
+    bundledDependencies:
+      - '@napi-rs/wasm-runtime'
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+      - '@tybys/wasm-util'
+      - '@emnapi/wasi-threads'
+      - tslib
 
   /@tailwindcss/postcss@4.1.16:
     resolution: {integrity: sha512-Qn3SFGPXYQMKR/UtqS+dqvPrzEeBZHrFA92maT4zijCVggdsXnDBMsPFJo1eArX3J+O+Gi+8pV4PkqjLCNBk3A==}
@@ -2257,6 +2264,7 @@ packages:
   /detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+    requiresBuild: true
 
   /detect-node-es@1.1.0:
     resolution: {integrity: sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ==}
@@ -2472,6 +2480,8 @@ packages:
       lightningcss-win32-arm64-msvc: 1.30.2
       lightningcss-win32-x64-msvc: 1.30.2
     dev: true
+    bundledDependencies:
+      - napi-wasm
 
   /lucide-react@0.454.0(react@19.2.0):
     resolution: {integrity: sha512-hw7zMDwykCLnEzgncEEjHeA6+45aeEzRYuKHuyRSOPkhko+J3ySGjGIzu+mmMfDFG1vazHepMaYFYHbTFAZAAQ==}
