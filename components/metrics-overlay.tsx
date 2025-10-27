@@ -4,8 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { UserProfile } from "@/lib/types"
-import { loadRLMetrics } from "@/lib/reinforcement-learning"
-import { loadPPOMetrics } from "@/lib/ppo-policy"
+import { loadRLMetrics, getRLInsights } from "@/lib/reinforcement-learning"
 import { TrendingUp, Target, Brain, Activity } from "lucide-react"
 
 interface MetricsOverlayProps {
@@ -16,7 +15,7 @@ interface MetricsOverlayProps {
 
 export function MetricsOverlay({ isOpen, onClose, profile }: MetricsOverlayProps) {
   const rlMetrics = loadRLMetrics()
-  const ppoMetrics = loadPPOMetrics()
+  const rlInsights = getRLInsights(rlMetrics)
 
   const performanceMetrics = profile?.performanceMetrics || {
     accuracy: 0,
@@ -62,7 +61,7 @@ export function MetricsOverlay({ isOpen, onClose, profile }: MetricsOverlayProps
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">System Metrics & RL/PPO Analytics</DialogTitle>
+          <DialogTitle className="text-2xl">System Metrics & Reinforcement Learning Analytics</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -120,46 +119,54 @@ export function MetricsOverlay({ isOpen, onClose, profile }: MetricsOverlayProps
                 <div className="text-2xl font-bold">{(rlMetrics?.totalReward ?? 0).toFixed(2)}</div>
               </Card>
               <Card className="p-4">
-                <div className="text-sm text-muted-foreground mb-1">Q-Table States</div>
-                <div className="text-2xl font-bold">{rlMetrics?.qTable?.size ?? 0}</div>
+                <div className="text-sm text-muted-foreground mb-1">States Explored</div>
+                <div className="text-2xl font-bold">{rlInsights?.statesExplored ?? 0}</div>
               </Card>
               <Card className="p-4">
-                <div className="text-sm text-muted-foreground mb-1">Learning Rate</div>
-                <div className="text-2xl font-bold">0.10</div>
+                <div className="text-sm text-muted-foreground mb-1">Convergence</div>
+                <div className="text-2xl font-bold">{(rlMetrics?.convergenceScore ?? 0).toFixed(1)}%</div>
               </Card>
             </div>
           </div>
 
-          {/* PPO Policy Metrics */}
+          {/* RL Insights */}
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Activity className="w-5 h-5 text-cyan-500" />
-              Proximal Policy Optimization (PPO)
+              Learning System Status
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <Card className="p-4">
-                <div className="text-sm text-muted-foreground mb-1">Policy Version</div>
-                <div className="text-2xl font-bold">{ppoMetrics?.policyVersion ?? 0}</div>
+                <div className="text-sm text-muted-foreground mb-2">Convergence Status</div>
+                <Badge variant={rlInsights.isConverged ? "default" : "secondary"}>
+                  {rlInsights.isConverged ? "Converged" : "Learning"}
+                </Badge>
               </Card>
               <Card className="p-4">
-                <div className="text-sm text-muted-foreground mb-1">Episodes Trained</div>
-                <div className="text-2xl font-bold">{ppoMetrics?.episodeCount ?? 0}</div>
+                <div className="text-sm text-muted-foreground mb-2">Exploration Level</div>
+                <Badge variant="outline">
+                  {rlInsights.explorationLevel === "high" ? "🔍 High" : rlInsights.explorationLevel === "medium" ? "🔎 Medium" : "🎯 Low"}
+                </Badge>
               </Card>
               <Card className="p-4">
-                <div className="text-sm text-muted-foreground mb-1">Clip Range</div>
-                <div className="text-2xl font-bold">{(ppoMetrics?.clipRange ?? 0).toFixed(3)}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground mb-1">Entropy Bonus</div>
-                <div className="text-2xl font-bold">{(ppoMetrics?.entropyBonus ?? 0).toFixed(4)}</div>
+                <div className="text-sm text-muted-foreground mb-2">Performance Trend</div>
+                <Badge
+                  variant={rlInsights.performanceTrend === "improving" ? "default" : rlInsights.performanceTrend === "declining" ? "destructive" : "secondary"}
+                >
+                  {rlInsights.performanceTrend === "improving" ? "📈 Improving" : rlInsights.performanceTrend === "declining" ? "📉 Declining" : "➡️ Stable"}
+                </Badge>
               </Card>
               <Card className="p-4">
                 <div className="text-sm text-muted-foreground mb-1">Last Update</div>
-                <div className="text-xs font-semibold">{formatDate(ppoMetrics?.lastUpdateTime)}</div>
+                <div className="text-xs font-semibold">{formatDate(rlMetrics?.lastUpdateTime)}</div>
               </Card>
               <Card className="p-4">
                 <div className="text-sm text-muted-foreground mb-1">Discount Factor</div>
-                <div className="text-2xl font-bold">0.99</div>
+                <div className="text-2xl font-bold">0.95</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground mb-1">Learning Rate</div>
+                <div className="text-sm font-bold">Adaptive (0.05-0.20)</div>
               </Card>
             </div>
           </div>

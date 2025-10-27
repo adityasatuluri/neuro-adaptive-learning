@@ -788,7 +788,9 @@ export function updateUserProfileWithRL(
     isCorrect,
     updatedProfile.performanceMetrics.accuracy,
     timeSpent,
-    previousAccuracy
+    previousAccuracy,
+    profile.currentDifficulty,
+    updatedProfile.performanceMetrics.consistency
   );
 
   const action = selectAction(
@@ -801,13 +803,20 @@ export function updateUserProfileWithRL(
     currentState,
     action,
     reward,
-    nextState
+    nextState,
+    rlMetrics.episodeCount
   );
 
   rlMetrics.episodeCount += 1;
   rlMetrics.totalReward += reward;
   rlMetrics.averageReward = rlMetrics.totalReward / rlMetrics.episodeCount;
   rlMetrics.explorationRate = decayExplorationRate(rlMetrics.episodeCount);
+  rlMetrics.lastUpdateTime = Date.now();
+
+  if (rlMetrics.episodeCount % 20 === 0) {
+    const { calculateConvergenceScore } = require('./reinforcement-learning');
+    rlMetrics.convergenceScore = calculateConvergenceScore(rlMetrics.qTable);
+  }
 
   saveRLMetrics(rlMetrics);
 
