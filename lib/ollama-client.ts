@@ -54,12 +54,12 @@ const questionSchema = z.object({
   description: z.string(),
   starterCode: z.string(),
   solutionCode: z.string(),
-  expectedOutput: z.string(),
-  // hints: z.array(z.string()),
+  expectedOutput: z.string().optional(),
   testCases: z.array(
     z.object({
       input: z.string(),
-      expectedOutput: z.string(),
+      expectedOutput: z.string().optional(),
+      output: z.string().optional(), // Model may return "output" instead
     })
   ),
   tags: z.array(z.string()),
@@ -207,6 +207,29 @@ function sanitizeJsonString(str: string): string {
     .replace(/:\s*"/g, ': "');
 }
 
+function normalizeQuestionOutput(parsed: any): any {
+  // Normalize testCases: convert "output" to "expectedOutput"
+  if (parsed.testCases && Array.isArray(parsed.testCases)) {
+    parsed.testCases = parsed.testCases.map((tc: any) => ({
+      input: tc.input,
+      expectedOutput: tc.expectedOutput || tc.output || "",
+    }));
+  }
+
+  // Ensure root expectedOutput exists
+  if (!parsed.expectedOutput) {
+    // Try to infer from first test case
+    if (parsed.testCases && parsed.testCases.length > 0) {
+      parsed.expectedOutput =
+        parsed.testCases[0].expectedOutput || "See test cases";
+    } else {
+      parsed.expectedOutput = "See test cases";
+    }
+  }
+
+  return parsed;
+}
+
 export async function generateAdaptiveQuestion(
   userProfile: any,
   difficulty: "easy" | "medium" | "hard",
@@ -223,23 +246,17 @@ export async function generateAdaptiveQuestion(
 
   let adaptiveGuidance = "";
 
-  // If accuracy >= 80%, increase complexity
   if (recentAccuracy >= 80) {
     adaptiveGuidance =
       "This should be a challenging problem that requires advanced thinking and optimization.";
-  }
-  // If accuracy < 60%, revisit weaker areas
-  else if (recentAccuracy < 60) {
+  } else if (recentAccuracy < 60) {
     adaptiveGuidance =
       "This should focus on fundamental concepts and be easier to build confidence.";
-  }
-  // Otherwise, maintain current difficulty
-  else {
+  } else {
     adaptiveGuidance =
       "This should be a balanced problem that reinforces current skills.";
   }
 
-  // Identify weak concepts from error patterns
   const errorPatterns =
     userProfile.performanceMetrics?.errorPatterns || new Map();
   const weakConcepts = Array.from(errorPatterns.entries())
@@ -255,16 +272,14 @@ export async function generateAdaptiveQuestion(
       : "";
 
   const difficultyGuides = {
-    easy: "beginner-friendly, 2-5 minutes, basic syntax, simple concepts",
-    medium:
-      "intermediate, 5-15 minutes, data structures, some algorithmic thinking",
-    hard: "advanced, 15-30 minutes, complex algorithms, optimization required",
+    easy: "easy",
+    medium: "medium",
+    hard: "hard",
   };
 
   const topicContext = topic ? `Focus on the topic: ${topic}.` : "";
 
-  const prompt = `Generate a unique Python coding question that is ${difficultyGuides[difficulty]}.
-${topicContext}
+  const prompt = `${difficultyGuides[difficulty]} question in ${topicContext}
 ${adaptiveGuidance}
 ${weakConceptsText}
 
@@ -274,9 +289,8 @@ Create a question with:
 3. Starter code template (incomplete, for the user to fill in)
 4. Complete solution code (the full working solution)
 5. Expected output
-6. 3-4 helpful hints
-7. 2-3 test cases with inputs and expected outputs
-8. Relevant tags
+6. 2-3 test cases with inputs and expected outputs
+7. Relevant tags
 
 Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
 {
@@ -285,12 +299,11 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
   "starterCode": "string",
   "solutionCode": "string",
   "expectedOutput": "string",
-  "hints": ["string", "string", "string"],
   "testCases": [{"input": "string", "expectedOutput": "string"}],
   "tags": ["string"]
 }`;
 
-  const response = await callOllama(prompt, model);
+  const response = await callOllama(prompt, "gpt-oss:120b-cloud");
   if (!response) {
     console.error(
       "[v0] No response from Ollama for adaptive question generation"
@@ -305,9 +318,10 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
   }
 
   try {
-    const sanitized = sanitizeJsonString(jsonStr);
+    const sanitized = jsonStr;
     console.log("[v0] Sanitized JSON:", sanitized.substring(0, 100) + "...");
-    const parsed = JSON.parse(sanitized);
+    let parsed = sanitized;
+    // parsed = normalizeQuestionOutput(parsed)
     console.log(
       "[v0] FINAL AI RESPONSE (Adaptive Question):",
       JSON.stringify(parsed, null, 2)
@@ -318,6 +332,58 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
   } catch (error) {
     console.error("[v0] Adaptive question parsing error:", error);
     return null;
+  }
+}
+
+async function formatQuestionWithGPTOSS(question: any): Promise<any> {
+  const formatPrompt = `You are a question formatter. Take this coding question and ensure it's well-formatted, clear, and follows best practices.
+
+Question to format:
+${JSON.stringify(question, null, 2)}
+
+Improve the question by:
+1. Ensuring the description is clear and comprehensive
+2. Making sure test cases are valid and cover edge cases
+3. Verifying the starter code is incomplete but helpful
+4. Ensuring the solution code is correct
+5. Making sure tags are relevant
+
+Return ONLY the improved question as valid JSON in this exact format (no markdown, no extra text):
+{
+  "title": "string",
+  "description": "string",
+  "starterCode": "string",
+  "solutionCode": "string",
+  "expectedOutput": "string",
+  "testCases": [{"input": "string", "expectedOutput": "string"}],
+  "tags": ["string"]
+}`;
+
+  const response = await callOllama(formatPrompt, "gpt-oss:120b-cloud");
+  if (!response) {
+    console.log(
+      "[v0] Formatting with gpt-oss failed, returning original question"
+    );
+    return question;
+  }
+
+  const jsonStr = extractJsonFromResponse(response);
+  if (!jsonStr) {
+    console.log(
+      "[v0] Could not extract formatted JSON, returning original question"
+    );
+    return question;
+  }
+
+  try {
+    const sanitized = jsonStr;
+    let formatted = JSON.parse(sanitized);
+    formatted = normalizeQuestionOutput(formatted);
+    console.log("[v0] Question formatted successfully with gpt-oss");
+    return formatted;
+  } catch (error) {
+    console.error("[v0] Error formatting question:", error);
+    return question;
   }
 }
 
@@ -332,13 +398,39 @@ export async function generateQuestionByDifficulty(
     hard: "hard",
   };
 
-  const topicContext = topic
-    ? topic
-    : "Array, String, or Dictionary manipulation";
+  const topicContext = topic ? topic : "Array, String, Hash Table, or Stack";
 
-  const prompt = `${difficultyGuides[difficulty]} question in ${topicContext}`;
-  console.log(prompt, model);
-  const response = await callOllama(prompt, model);
+  const prompt = `Generate a ${difficultyGuides[difficulty]} LeetCode-style Python coding problem in ${topicContext}.
+
+Create a question with:
+1. A clear, engaging title
+2. Detailed description of what to solve (use proper markdown formatting)
+3. Starter code template (incomplete, for the user to fill in)
+4. Complete solution code (the full working solution)
+5. Expected output description
+6. 2-3 test cases with inputs and expected outputs
+7. Relevant tags (from: Array, String, Hash Table, Linked List, Stack, Queue, Tree, Graph, Dynamic Programming, Recursion, Sorting, Searching, Math, Bit Manipulation, Greedy)
+
+IMPORTANT: 
+- Respond ONLY with valid JSON, no markdown, no extra text, no code blocks
+- Format the description with proper markdown (use ** for bold, \`\` for code, etc.)
+- Ensure all test cases have valid inputs and outputs
+- Make sure the solution code is correct and complete
+
+Use this exact format:
+{
+  "title": "string",
+  "description": "string",
+  "starterCode": "string",
+  "solutionCode": "string",
+  "expectedOutput": "string",
+  "testCases": [{"input": "string", "expectedOutput": "string"}],
+  "tags": ["string"]
+}`;
+
+  console.log("[v0] Generating question with gpt-oss:120b-cloud");
+
+  const response = await callOllama(prompt, "gpt-oss:120b-cloud");
   if (!response) {
     console.error("[v0] No response from Ollama for question generation");
     return null;
@@ -351,15 +443,16 @@ export async function generateQuestionByDifficulty(
   }
 
   try {
-    const sanitized = sanitizeJsonString(jsonStr);
-    console.log("[v0] Sanitized JSON:", sanitized);
-    const parsed = JSON.parse(sanitized);
+    const sanitized = jsonStr;
+    console.log("[v0] Sanitized JSON:", sanitized.substring(0, 200) + "...");
+    let parsed = JSON.parse(sanitized);
+    // parsed = normalizeQuestionOutput(parsed);
     console.log(
       "[v0] FINAL AI RESPONSE (Question):",
       JSON.stringify(parsed, null, 2)
     );
     const validated = questionSchema.parse(parsed);
-    console.log("[v0] Question generated successfully");
+    console.log("[v0] Question generated successfully with gpt-oss");
     return validated;
   } catch (error) {
     console.error("[v0] Question parsing error:", error);
@@ -417,7 +510,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
   }
 
   try {
-    const sanitized = sanitizeJsonString(jsonStr);
+    const sanitized = jsonStr;
     console.log("[v0] Sanitized JSON:", sanitized.substring(0, 100) + "...");
     const parsed = JSON.parse(sanitized);
     console.log(

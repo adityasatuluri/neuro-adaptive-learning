@@ -12,9 +12,8 @@ export interface Question {
   solutionCode?: string
   testCases: TestCase[]
   expectedOutput: string
-  hints: string[]
-  prerequisites?: string[] // Topic IDs that should be completed first
-  estimatedTime: number // in seconds
+  prerequisites?: string[]
+  estimatedTime: number
   tags: string[]
 }
 

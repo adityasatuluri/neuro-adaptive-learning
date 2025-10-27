@@ -1,17 +1,3 @@
-{
-  "title": "Minimum operations to make all elements unique",
-  "description": "You are given an integer array nums of length n where each element is between 1 andμ (inclusive). The following operation can be applied on the array any number of times:\nSelect two different indices i and j, then replace both values with new integers equal to min(nums[i], nums[j]) + 1. In other words, αⁿ⚜(●) denotes the minimum operation.\nReturn true if it is possible that all elements of array become unique, and false otherwise.\nThe tests are generated such that n is in the range [1, 10^5] and nums.length == ㎷⚜(●) - 4. In each test case, all elements of array will be unique integers from 1 to ㎺ⁿ⚊ (inclusive).\nNote that min(nums[i], nums[j]) is the minimum integer between two values.\nה",
-  "starterCode": "class Solution:\n def uniqueElementsAfterOperations(self, nums: List[int]) -> bool:\n ",
-  "solutionCode": "class Solution:\n def uniqueElementsAfterOperations(self, nums: List[int]) -> bool:\n return all(x < y for x, y in pairwise(nums)) or len({y - x for x, y in pairwise(nums)}) == 1\n",
-  "testCases": [
-    {
-      "input": "nums = [5, 7, 6]",
-      "output": "False"
-    },
-    {
-      "input": "nums = [9, 8, 7, 6, 5, 4, 3, 2, 1]",
-      "output": "True"
-    }
-  ],
-  "tags": ["Arrays", "Hash Table", "Greedy"]
-}
+{ "title": "Minimum operations to make all elements equal in an array", "description": "Given a\u017bary of positive integers arr, you can do the following operation any number of times:\nSelect two distinct indices i and j where abs(arr[i] - arr[j]) <= k (where k is given). Then add or subtract one from both values at that index.\nReturn an integer denoting minimum number of operations to make all elements in the array equal. If it cannot be done, return -1.\n\u017b", "starterCode": "class Solution:\n def minOperations(self, arr: List[int], k: int) -> int:\n ",
+"solutionCode": "class Solution:\n def minOperations(self, arr: List[int], k: int) -> int:\n ans = max(arr)\n for x in range((ans + 1) // 2):\n cnt = sum(\n abs(a - b) <= k and (a - b > 0 or a == b) \n for a, b in combinations(arr, 2)\n )\n if cnt == len(arr) * (len(arr) - 1) // 2:\n return ans + x * 2\n return -1\n",
+"expectedOutput": "An integer denoting minimum number of operations to make all elements in the array equal. If it cannot be done, returns \"-1\"\\r\nExample 1:\\r\nInput: arr = [9], k = 2\\r\nOutput: -1\\r\nExplanation:\u05beIt can not become an identical number by applying the operations.\\r\n\\r\nExample 2:\\r\nInput: arr = [3, 4, 2, 1, 6], k = 3\\r\nOutput: 9\\r\nExplanation:\u05beOne way to make all elements equal is the following operations (x denotes current element): \\r\n(i) Increase x from position 2 by one. New value of this element equals three. Now array = [3, 4, 3, 1, 6].\\r\n(ii) Decrease x from positions 0 and 4 by two in once operation (each decreases the values at these indices). Then new value for all elements are equal to six:\\r\nExample 3: Input: arr = [9], k = 100\\r\nOutput: -1\\r\nExplanisection:\u548cIt can not become an identical number by applying the operations. \\r\n","testCases": [ {\n \"input\": "arr = [3, 7, 9], k = 2", \n \"output\": "-1\""\n }, \n {\n \"input\": "arr = [4, 5, 6], k = 10", \n \"output\": "8\""\n }\n ], \n "tags": [\n \"Array\"\n ]\n}
